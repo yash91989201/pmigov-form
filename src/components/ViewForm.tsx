@@ -1,89 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import { jsPDF } from 'jspdf';
-import domtoimage from 'dom-to-image';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ApiError, ConsentFormDetail } from '../api';
 import { Download, Printer, ArrowLeft } from 'lucide-react';
 import { ConsentFormView } from './ConsentFormView';
+import { useAdminStore } from '../store/adminStore';
 
 export function ViewForm() {
   const { id } = useParams<{ id: string }>();
-  const [formData, setFormData] = useState<any>(null);
+  const navigate = useNavigate();
+  const loadForm = useAdminStore((s) => s.loadForm);
+  const [formData, setFormData] = useState<ConsentFormDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   useEffect(() => {
     const fetchForm = async () => {
       if (!id) return;
       try {
-        const docRef = doc(db, 'consent_forms', id);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setFormData(docSnap.data());
-        } else {
-          setFormData(null);
-        }
+        setFormData(await loadForm(id));
       } catch (err) {
         console.error(err);
+        if (err instanceof ApiError && err.status === 401) {
+          // Not logged in — send to the admin login screen.
+          navigate('/admin');
+          return;
+        }
+        setFormData(null);
       } finally {
         setLoading(false);
       }
     };
     fetchForm();
-  }, [id]);
+  }, [id, navigate, loadForm]);
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const handleDownloadPDF = async () => {
-    const element = document.getElementById('pdf-content');
-    if (!element) return;
-    
-    setIsGeneratingPDF(true);
-    try {
-      const imgData = await domtoimage.toPng(element, {
-        bgcolor: '#ffffff',
-        width: element.scrollWidth,
-        height: element.scrollHeight,
-        style: {
-          transform: 'scale(1)',
-          transformOrigin: 'top left'
-        }
-      });
-      
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const pdfHeight = (element.scrollHeight * pdfWidth) / element.scrollWidth;
-      
-      let heightLeft = pdfHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position -= pageHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      const fileName = `PMI_Consent_${formData.customerName ? formData.customerName.replace(/\s+/g, '_') : 'Form'}.pdf`;
-      pdf.save(fileName);
-    } catch (error) {
-      console.error('Error generating PDF', error);
-      alert('Failed to generate PDF. You can try the Print option instead.');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
   };
 
   if (loading) {
@@ -107,14 +57,13 @@ export function ViewForm() {
           Back to Admin
         </Link>
         <div className="flex gap-3">
-          <button
-            onClick={handleDownloadPDF}
-            disabled={isGeneratingPDF}
-            className="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-700 border border-blue-300 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+          <a
+            href={`/api/forms/${id}/pdf`}
+            className="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-700 border border-blue-300 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
           >
             <Download className="w-4 h-4" />
-            {isGeneratingPDF ? 'Generating...' : 'Download PDF'}
-          </button>
+            Download PDF
+          </a>
           <button
             onClick={handlePrint}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"

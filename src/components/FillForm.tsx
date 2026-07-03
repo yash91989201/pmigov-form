@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
-import { CheckCircle2, Building2, ShieldCheck, FileSignature, AlertCircle, Upload, Image as ImageIcon, X } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ConsentFormView } from './ConsentFormView';
+import { ImageCropDialog } from './ImageCropDialog';
+import { CheckCircle2, Building2, ShieldCheck, FileSignature, AlertCircle, Upload, Image as ImageIcon, X, RotateCcw } from 'lucide-react';
+import { submitForm } from '../api';
 import { Link } from 'react-router-dom';
+import { useDraftStore, isDraftDirty } from '../store/draftStore';
 
 export function FillForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -12,73 +12,107 @@ export function FillForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<any>(null);
 
-  const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
-  const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
+  // Draft is persisted to localStorage so a refresh / accidental close doesn't
+  // wipe a half-filled form (nothing is stored server-side until submit).
+  const { formData, aadhaarFront, aadhaarBack, setField, setAadhaar, reset } = useDraftStore();
+  const [cropTarget, setCropTarget] = useState<{ src: string; side: 'front' | 'back' } | null>(null);
+  // Whether a saved draft was restored on this load (computed once, before edits).
+  const [draftRestored, setDraftRestored] = useState(() => isDraftDirty(useDraftStore.getState()));
 
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    customerName: '',
-    fatherSpouseName: '',
-    address: '',
-    mobileNumber: '',
-    emailId: '',
-    serviceDescription: '',
-    amountPayable: '',
-    modeOfPayment: 'Cash',
-    transactionRef: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    place: '',
-    signatureUrl: null as string | null,
-    agreed: false
-  });
+  const [consentRead, setConsentRead] = useState(false);
+  const consentBoxRef = useRef<HTMLDivElement>(null);
+
+  const checkConsentScroll = () => {
+    const el = consentBoxRef.current;
+    if (!el || consentRead) return;
+    // Unlock once scrolled to (nearly) the bottom; also covers screens tall
+    // enough that the declaration doesn't scroll at all.
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 8) {
+      setConsentRead(true);
+    }
+  };
+
+  useEffect(() => {
+    checkConsentScroll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (side === 'front') {
-          setAadhaarFront(event.target?.result as string);
-        } else {
-          setAadhaarBack(event.target?.result as string);
-        }
+        setCropTarget({ src: event.target?.result as string, side });
       };
       reader.readAsDataURL(file);
     }
+    // Allow re-selecting the same file after a cancel.
+    e.target.value = '';
+  };
+
+  const handleCropConfirm = (dataUrl: string) => {
+    if (!cropTarget) return;
+    setAadhaar(cropTarget.side, dataUrl);
+    setCropTarget(null);
+    setError(null);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    
+
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
+      setField({ [name]: checked });
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      setField({ [name]: value });
     }
     setError(null);
   };
 
   const handleSignatureChange = (url: string | null) => {
-    setFormData(prev => ({ ...prev, signatureUrl: url }));
+    setField({ signatureUrl: url });
     setError(null);
+  };
+
+  const handleClearForm = () => {
+    if (window.confirm('Clear the form and delete the saved draft? This cannot be undone.')) {
+      reset();
+      setDraftRestored(false);
+      setError(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.agreed) {
-      setError("Please check the consent box to proceed.");
-      return;
-    }
-    
-    if (!formData.signatureUrl) {
-      setError("Please provide your digital signature.");
+
+    const requiredFields: [keyof typeof formData, string][] = [
+      ['date', 'Date'],
+      ['customerName', 'Customer Name'],
+      ['fatherSpouseName', "Father's/Spouse's Name"],
+      ['address', 'Address'],
+      ['mobileNumber', 'Mobile Number'],
+      ['emailId', 'Email ID'],
+      ['serviceDescription', 'Service Description'],
+      ['amountPayable', 'Amount Payable'],
+      ['modeOfPayment', 'Mode of Payment'],
+      ['transactionRef', 'Transaction Reference No.'],
+      ['paymentDate', 'Date of Payment'],
+      ['place', 'Place'],
+    ];
+    const missing = requiredFields
+      .filter(([key]) => !String(formData[key] ?? '').trim())
+      .map(([, label]) => label);
+    if (!aadhaarFront) missing.push('Aadhaar Card (Front)');
+    if (!aadhaarBack) missing.push('Aadhaar Card (Back)');
+    if (!formData.signatureUrl) missing.push('Digital Signature');
+
+    if (missing.length > 0) {
+      setError(`All fields are mandatory. Please fill: ${missing.join(', ')}.`);
       return;
     }
 
-    if (!formData.customerName || !formData.mobileNumber) {
-      setError("Please fill all required customer details.");
+    if (!formData.agreed) {
+      setError("Please check the consent box to proceed.");
       return;
     }
 
@@ -86,20 +120,18 @@ export function FillForm() {
     setError(null);
 
     try {
-      const formPayload = {
-        ...formData,
-        aadhaarFront,
-        aadhaarBack,
-        submittedAt: serverTimestamp()
-      };
-      
-      // Remove 'agreed' from the payload as it's not in the blueprint
-      const { agreed, ...dataToSave } = formPayload;
-      
-      await addDoc(collection(db, 'consent_forms'), dataToSave);
-      
-      setSubmittedData(dataToSave);
+      const { agreed, signatureUrl, ...details } = formData;
+
+      const result = await submitForm({
+        ...details,
+        signature: signatureUrl!,
+        aadhaarFront: aadhaarFront!,
+        aadhaarBack: aadhaarBack!
+      });
+
+      setSubmittedData(result);
       setIsSubmitted(true);
+      reset(); // Draft is now persisted server-side — clear the local draft.
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error(err);
@@ -132,6 +164,14 @@ export function FillForm() {
   // Edit Mode (Form)
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col items-center p-4 sm:p-8 font-sans">
+      {cropTarget && (
+        <ImageCropDialog
+          src={cropTarget.src}
+          title={`Crop Aadhaar Card (${cropTarget.side === 'front' ? 'Front' : 'Back'})`}
+          onCancel={() => setCropTarget(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
       <div className="w-full max-w-4xl mb-4 flex justify-end no-print">
         <Link to="/admin" className="text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
           Admin Login
@@ -157,8 +197,31 @@ export function FillForm() {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-10">
-          
+        <form onSubmit={handleSubmit} noValidate className="p-6 sm:p-10 space-y-10">
+
+          {draftRestored && (
+            <div className="bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium px-4 py-3 rounded-lg flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <RotateCcw className="w-4 h-4 flex-shrink-0" />
+                Draft restored — your previously entered details were saved on this device.
+              </div>
+              <button
+                type="button"
+                onClick={handleClearForm}
+                className="flex items-center gap-1.5 text-blue-700 hover:text-blue-900 font-semibold whitespace-nowrap transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Clear form
+              </button>
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm font-medium px-4 py-3 rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            All fields marked with * are mandatory — the form cannot be submitted until every field, document upload, and the signature are completed.
+          </div>
+
+
           {/* Customer Details section */}
           <section>
             <div className="flex items-center gap-2 border-b-2 border-slate-100 pb-3 mb-6">
@@ -195,26 +258,28 @@ export function FillForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Father's/Spouse's Name</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Father's/Spouse's Name *</label>
+                <input
+                  type="text"
                   name="fatherSpouseName"
                   value={formData.fatherSpouseName}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
                   placeholder="Enter relative's name"
+                  required
                 />
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Address</label>
-                <textarea 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Address *</label>
+                <textarea
                   name="address"
                   value={formData.address}
                   onChange={handleInputChange}
                   rows={2}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400 resize-none"
                   placeholder="Enter full residential address"
+                  required
                 />
               </div>
 
@@ -232,14 +297,15 @@ export function FillForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Email ID</label>
-                <input 
-                  type="email" 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Email ID *</label>
+                <input
+                  type="email"
                   name="emailId"
                   value={formData.emailId}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
                   placeholder="name@example.com"
+                  required
                 />
               </div>
             </div>
@@ -251,18 +317,18 @@ export function FillForm() {
               <div className="bg-indigo-100 text-indigo-700 p-2 rounded-lg">
                 <ImageIcon className="w-5 h-5" />
               </div>
-              <h3 className="text-xl font-bold text-slate-800">2. Identity Documents (Optional)</h3>
+              <h3 className="text-xl font-bold text-slate-800">2. Identity Documents *</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Front)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Front) *</label>
                 {aadhaarFront ? (
                   <div className="relative rounded-lg overflow-hidden border border-slate-200">
-                    <img src={aadhaarFront} alt="Aadhaar Front" className="w-full h-40 object-cover" />
+                    <img src={aadhaarFront} alt="Aadhaar Front" className="w-full max-h-72 object-contain bg-slate-50" />
                     <button
                       type="button"
-                      onClick={() => setAadhaarFront(null)}
+                      onClick={() => setAadhaar('front', null)}
                       className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
                     >
                       <X className="w-4 h-4" />
@@ -274,19 +340,19 @@ export function FillForm() {
                       <Upload className="w-8 h-8 text-slate-400 mb-2" />
                       <p className="text-sm text-slate-500 font-medium">Click to upload front</p>
                     </div>
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'front')} />
+                    <input type="file" className="hidden" accept="image/png,image/jpeg" onChange={(e) => handleImageUpload(e, 'front')} />
                   </label>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Back)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Back) *</label>
                 {aadhaarBack ? (
                   <div className="relative rounded-lg overflow-hidden border border-slate-200">
-                    <img src={aadhaarBack} alt="Aadhaar Back" className="w-full h-40 object-cover" />
+                    <img src={aadhaarBack} alt="Aadhaar Back" className="w-full max-h-72 object-contain bg-slate-50" />
                     <button
                       type="button"
-                      onClick={() => setAadhaarBack(null)}
+                      onClick={() => setAadhaar('back', null)}
                       className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
                     >
                       <X className="w-4 h-4" />
@@ -298,7 +364,7 @@ export function FillForm() {
                       <Upload className="w-8 h-8 text-slate-400 mb-2" />
                       <p className="text-sm text-slate-500 font-medium">Click to upload back</p>
                     </div>
-                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'back')} />
+                    <input type="file" className="hidden" accept="image/png,image/jpeg" onChange={(e) => handleImageUpload(e, 'back')} />
                   </label>
                 )}
               </div>
@@ -316,14 +382,15 @@ export function FillForm() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Service Description</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Service Description *</label>
+                <input
+                  type="text"
                   name="serviceDescription"
                   value={formData.serviceDescription}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
                   placeholder="Describe the services availed"
+                  required
                 />
               </div>
 
@@ -341,8 +408,8 @@ export function FillForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Mode of Payment</label>
-                <select 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Mode of Payment *</label>
+                <select
                   name="modeOfPayment"
                   value={formData.modeOfPayment}
                   onChange={handleInputChange}
@@ -359,25 +426,27 @@ export function FillForm() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Transaction Reference No.</label>
-                <input 
-                  type="text" 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Transaction Reference No. *</label>
+                <input
+                  type="text"
                   name="transactionRef"
                   value={formData.transactionRef}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
                   placeholder="e.g. UPI Ref / Cheque No."
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Date of Payment</label>
-                <input 
-                  type="date" 
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Date of Payment *</label>
+                <input
+                  type="date"
                   name="paymentDate"
                   value={formData.paymentDate}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900"
+                  required
                 />
               </div>
             </div>
@@ -390,7 +459,11 @@ export function FillForm() {
               <h3 className="text-lg font-bold">Consent Declaration</h3>
             </div>
             
-            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-h-64 overflow-y-auto text-sm text-slate-700 space-y-4 mb-6">
+            <div
+              ref={consentBoxRef}
+              onScroll={checkConsentScroll}
+              className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-h-64 overflow-y-auto text-sm text-slate-700 space-y-4 mb-6"
+            >
               <p>
                 I, <strong>{formData.customerName || '[Customer Name]'}</strong>, hereby confirm that I have voluntarily availed/requested services from PMI Services Enterprises and agree to make payment for the services provided. I further declare and consent to the following:
               </p>
@@ -409,18 +482,27 @@ export function FillForm() {
               </div>
             </div>
 
-            <label className="flex items-start gap-3 cursor-pointer group">
+            {!consentRead && (
+              <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-4">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                Please scroll through the full declaration above to enable the agreement checkbox.
+              </div>
+            )}
+
+            <label className={`flex items-start gap-3 group ${consentRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
               <div className="relative flex items-center justify-center mt-0.5">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   name="agreed"
                   checked={formData.agreed}
                   onChange={handleInputChange}
-                  className="peer w-6 h-6 appearance-none border-2 border-slate-300 rounded hover:border-blue-500 checked:bg-blue-600 checked:border-blue-600 transition-colors"
+                  disabled={!consentRead}
+                  className="peer w-6 h-6 appearance-none border-2 border-slate-300 rounded enabled:hover:border-blue-500 checked:bg-blue-600 checked:border-blue-600 transition-colors disabled:bg-slate-100"
+                  required
                 />
                 <CheckCircle2 className="w-4 h-4 text-white absolute pointer-events-none opacity-0 peer-checked:opacity-100" />
               </div>
-              <span className="text-slate-800 font-medium leading-tight group-hover:text-blue-900 transition-colors">
+              <span className={`text-slate-800 font-medium leading-tight transition-colors ${consentRead ? 'group-hover:text-blue-900' : ''}`}>
                 I agree to the terms, conditions, and consent declarations outlined above. *
               </span>
             </label>

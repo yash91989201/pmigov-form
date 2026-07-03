@@ -1,6 +1,0 @@
-{
-  "name": "PMI GOV Consent Form",
-  "description": "Digital consent and payment authorization form for PMI Services Enterprises.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

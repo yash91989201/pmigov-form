@@ -4,27 +4,6 @@ import { Building2, ShieldCheck, FileSignature, CheckCircle2 } from 'lucide-reac
 export function ConsentFormView({ formData }: { formData: any }) {
   return (
     <div className="bg-white" id="pdf-content">
-      {/* Identity Documents (Top for PDF) */}
-      {(formData.aadhaarFront || formData.aadhaarBack) && (
-        <div className="mb-10 print-avoid-break">
-          <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest border-b border-gray-300 pb-2 mb-4">Identity Documents</h3>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            {formData.aadhaarFront && (
-              <div className="flex-1 max-w-sm">
-                <p className="text-xs font-semibold text-gray-600 mb-2">Aadhaar (Front)</p>
-                <img src={formData.aadhaarFront} alt="Aadhaar Front" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
-              </div>
-            )}
-            {formData.aadhaarBack && (
-              <div className="flex-1 max-w-sm">
-                <p className="text-xs font-semibold text-gray-600 mb-2">Aadhaar (Back)</p>
-                <img src={formData.aadhaarBack} alt="Aadhaar Back" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       <div className="text-center mb-10 pb-6 border-b-2 border-gray-900">
         <div className="flex justify-center items-center gap-3 mb-2">
           <Building2 className="w-8 h-8 text-blue-800" />
@@ -69,6 +48,27 @@ export function ConsentFormView({ formData }: { formData: any }) {
             </div>
           </div>
         </section>
+
+        {/* Identity Documents */}
+        {(formData.aadhaarFront || formData.aadhaarBack) && (
+          <section className="print-avoid-break">
+            <h3 className="text-lg font-bold text-blue-900 border-b-2 border-blue-900 pb-1 inline-block uppercase tracking-wide mb-4">Identity Documents</h3>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center mt-4">
+              {formData.aadhaarFront && (
+                <div className="flex-1 max-w-sm">
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Aadhaar (Front)</p>
+                  <img src={formData.aadhaarFront} alt="Aadhaar Front" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
+                </div>
+              )}
+              {formData.aadhaarBack && (
+                <div className="flex-1 max-w-sm">
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Aadhaar (Back)</p>
+                  <img src={formData.aadhaarBack} alt="Aadhaar Back" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Consent Declaration */}
         <section className="print-avoid-break bg-gray-50 p-6 rounded-lg border border-gray-200 print-no-border">
