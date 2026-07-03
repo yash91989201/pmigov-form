@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { imageSize } from 'image-size';
 
 export interface FormRecord {
   date: string | null;
@@ -94,6 +95,11 @@ function fieldTable(doc: PDFKit.PDFDocument, rows: [string, string | null][]) {
   }
 }
 
+export interface VerificationMeta {
+  contentHash?: string | null;
+  submittedAt?: Date | string | null;
+}
+
 export function buildFormPdf(
   form: FormRecord,
   images: {
@@ -101,6 +107,7 @@ export function buildFormPdf(
     aadhaarFront: PdfImage | null;
     aadhaarBack: PdfImage | null;
   },
+  verification?: VerificationMeta,
 ): PDFKit.PDFDocument {
   const doc = new PDFDocument({ size: 'A4', margins: { top: 50, bottom: 50, left: 50, right: 50 } });
   const x = doc.page.margins.left;
@@ -139,28 +146,44 @@ export function buildFormPdf(
     sectionTitle(doc, 'Identity Documents');
     const gap = 20;
     const colWidth = (width - gap) / 2;
-    const imageHeight = 240;
+    const maxImageHeight = 240;
     const startY = doc.y;
     const columns: [string, PdfImage | null, number][] = [
       ['Aadhaar Card (Front)', images.aadhaarFront, x],
       ['Aadhaar Card (Back)', images.aadhaarBack, x + colWidth + gap],
     ];
+    // Advance by the tallest actually-rendered image, not the max box, so no
+    // dead space is reserved below landscape card photos.
+    let tallest = 0;
     for (const [label, img, colX] of columns) {
       if (!embeddable(img)) continue;
       doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569');
       doc.text(label, colX, startY, { width: colWidth });
       doc.image(img.buffer, colX, startY + 18, {
-        fit: [colWidth, imageHeight],
+        fit: [colWidth, maxImageHeight],
         align: 'center',
-        valign: 'center',
       });
+      let rendered = maxImageHeight;
+      try {
+        const dims = imageSize(img.buffer);
+        if (dims.width && dims.height) {
+          const scale = Math.min(colWidth / dims.width, maxImageHeight / dims.height, 1);
+          rendered = dims.height * scale;
+        }
+      } catch {
+        // Unknown dimensions — keep the conservative full box height.
+      }
+      tallest = Math.max(tallest, rendered);
     }
     doc.x = x;
-    doc.y = startY + 18 + imageHeight;
+    doc.y = startY + 18 + (tallest || maxImageHeight);
   }
 
-  // Consent declaration onwards goes on the second page.
-  doc.addPage();
+  // Consent declaration flows right after — only break if the remaining space
+  // can't fit the title plus a couple of lines.
+  if (doc.y + 140 > doc.page.height - doc.page.margins.bottom) {
+    doc.addPage();
+  }
   sectionTitle(doc, 'Consent Declaration');
   doc.font('Helvetica').fontSize(9.5).fillColor('#1f2937');
   doc.text(
@@ -219,6 +242,33 @@ export function buildFormPdf(
   doc.text('CUSTOMER SIGNATURE', sigX, doc.y + 2, { width: 200, align: 'center' });
   doc.x = x;
   doc.y = Math.max(doc.y, lineY + 40);
+
+  // Tamper-evidence stamp: binds this document's fields + images to a hash
+  // recorded at submission. Any later edit changes the hash on re-verification.
+  if (verification?.contentHash) {
+    if (doc.y + 60 > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+    }
+    doc.moveDown(1.5);
+    const stampY = doc.y;
+    doc.lineWidth(0.75).strokeColor('#cbd5e1');
+    doc.moveTo(x, stampY).lineTo(x + width, stampY).stroke();
+    doc.moveDown(0.5);
+    doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#475569');
+    doc.text('DOCUMENT INTEGRITY VERIFICATION', x, doc.y, { width });
+    doc.moveDown(0.2);
+    doc.font('Helvetica').fontSize(7).fillColor('#64748b');
+    const submitted =
+      verification.submittedAt instanceof Date
+        ? verification.submittedAt.toISOString()
+        : verification.submittedAt || '-';
+    doc.text(`Submitted at (UTC): ${submitted}`, { width });
+    doc.text(`SHA-256: ${verification.contentHash}`, { width });
+    doc.text(
+      'This form and its attached documents are bound to the hash above. Any alteration changes the hash on re-verification.',
+      { width },
+    );
+  }
 
   return doc;
 }

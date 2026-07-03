@@ -15,10 +15,16 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource/great-vibes": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
+    "@fontsource/ibm-plex-sans": "^5.2.8",
+    "@fontsource/spectral": "^5.2.8",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "axios": "^1.18.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "image-size": "^2.0.2",
     "ioredis": "^5.11.1",
     "lucide-react": "^0.546.0",
     "minio": "^8.0.5",

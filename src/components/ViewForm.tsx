@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ApiError, ConsentFormDetail } from '../api';
-import { Download, Printer, ArrowLeft } from 'lucide-react';
+import { Download, ArrowLeft } from 'lucide-react';
 import { ConsentFormView } from './ConsentFormView';
 import { useAdminStore } from '../store/adminStore';
 
@@ -32,10 +32,6 @@ export function ViewForm() {
     fetchForm();
   }, [id, navigate, loadForm]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
   }
@@ -56,22 +52,13 @@ export function ViewForm() {
           <ArrowLeft className="w-5 h-5" />
           Back to Admin
         </Link>
-        <div className="flex gap-3">
-          <a
-            href={`/api/forms/${id}/pdf`}
-            className="flex items-center gap-2 bg-white hover:bg-gray-50 text-blue-700 border border-blue-300 px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
-          >
-            <Download className="w-4 h-4" />
-            Download PDF
-          </a>
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
-          >
-            <Printer className="w-4 h-4" />
-            Print
-          </button>
-        </div>
+        <a
+          href={`/api/forms/${id}/pdf`}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
+        >
+          <Download className="w-4 h-4" />
+          Download PDF
+        </a>
       </div>
 
       <div className="max-w-4xl w-full bg-white rounded-xl shadow-xl overflow-hidden card-container p-8 sm:p-12">

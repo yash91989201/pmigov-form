@@ -5,8 +5,16 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { pool, migrate } from './db.ts';
-import { ensureBucket, putDataUrl, getObject, removeObjects, presignGet } from './storage.ts';
+import {
+  ensureBucket,
+  putBuffer,
+  decodeDataUrl,
+  getObject,
+  removeObjects,
+  presignGet,
+} from './storage.ts';
 import { cacheGet, cacheSet, cacheDelPrefix } from './cache.ts';
+import { hashSubmission, type HashableFields } from './integrity.ts';
 import { buildFormPdf, type PdfImage } from './pdf.ts';
 import { checkPassword, setSessionCookie, clearSessionCookie, requireAdmin } from './auth.ts';
 
@@ -22,6 +30,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, '../dist');
 
 const app = express();
+// Honor X-Forwarded-For so req.ip reflects the real client behind a proxy.
+app.set('trust proxy', true);
 // Signature + Aadhaar images arrive as base64 data URLs in the JSON body.
 app.use(express.json({ limit: '30mb' }));
 
@@ -98,13 +108,40 @@ app.post('/api/forms', async (req, res) => {
   const storedKeys: string[] = [];
 
   try {
-    const signatureKey = await putDataUrl(`forms/${id}/signature.png`, body.signature!);
+    // Decode once so we hash the exact bytes we store.
+    const signature = decodeDataUrl(body.signature!);
+    const aadhaarFront = decodeDataUrl(body.aadhaarFront!);
+    const aadhaarBack = decodeDataUrl(body.aadhaarBack!);
+
+    // The exact values that get persisted — hashed in this same shape so the
+    // integrity check is reproducible from the stored row.
+    const fields: HashableFields = {
+      date: body.date ?? '',
+      customerName: body.customerName!.trim(),
+      fatherSpouseName: body.fatherSpouseName ?? '',
+      address: body.address ?? '',
+      mobileNumber: body.mobileNumber!.trim(),
+      emailId: body.emailId ?? '',
+      serviceDescription: body.serviceDescription ?? '',
+      amountPayable: body.amountPayable ?? '',
+      modeOfPayment: body.modeOfPayment ?? '',
+      transactionRef: body.transactionRef ?? '',
+      paymentDate: body.paymentDate ?? '',
+      place: body.place ?? '',
+    };
+    const contentHash = hashSubmission(fields, {
+      signature: signature.buffer,
+      aadhaarFront: aadhaarFront.buffer,
+      aadhaarBack: aadhaarBack.buffer,
+    });
+
+    const signatureKey = await putBuffer(`forms/${id}/signature.png`, signature.buffer, signature.contentType);
     storedKeys.push(signatureKey);
 
-    const aadhaarFrontKey = await putDataUrl(`forms/${id}/aadhaar-front`, body.aadhaarFront!);
+    const aadhaarFrontKey = await putBuffer(`forms/${id}/aadhaar-front`, aadhaarFront.buffer, aadhaarFront.contentType);
     storedKeys.push(aadhaarFrontKey);
 
-    const aadhaarBackKey = await putDataUrl(`forms/${id}/aadhaar-back`, body.aadhaarBack!);
+    const aadhaarBackKey = await putBuffer(`forms/${id}/aadhaar-back`, aadhaarBack.buffer, aadhaarBack.contentType);
     storedKeys.push(aadhaarBackKey);
 
     await pool.query(
@@ -112,29 +149,32 @@ app.post('/api/forms', async (req, res) => {
         id, date, customer_name, father_spouse_name, address, mobile_number,
         email_id, service_description, amount_payable, mode_of_payment,
         transaction_ref, payment_date, place,
-        signature_key, aadhaar_front_key, aadhaar_back_key
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        signature_key, aadhaar_front_key, aadhaar_back_key,
+        content_hash, submitter_ip
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
       [
         id,
-        body.date,
-        body.customerName!.trim(),
-        body.fatherSpouseName,
-        body.address,
-        body.mobileNumber!.trim(),
-        body.emailId,
-        body.serviceDescription,
-        body.amountPayable,
-        body.modeOfPayment,
-        body.transactionRef,
-        body.paymentDate,
-        body.place,
+        fields.date,
+        fields.customerName,
+        fields.fatherSpouseName,
+        fields.address,
+        fields.mobileNumber,
+        fields.emailId,
+        fields.serviceDescription,
+        fields.amountPayable,
+        fields.modeOfPayment,
+        fields.transactionRef,
+        fields.paymentDate,
+        fields.place,
         signatureKey,
         aadhaarFrontKey,
         aadhaarBackKey,
+        contentHash,
+        req.ip ?? null,
       ],
     );
 
-    res.status(201).json({ id });
+    res.status(201).json({ id, contentHash });
   } catch (err) {
     // Don't leave orphaned images behind if the insert fails.
     await removeObjects(storedKeys).catch(() => {});
@@ -191,6 +231,8 @@ app.get('/api/forms/:id', requireAdmin, async (req, res) => {
       paymentDate: r.payment_date,
       place: r.place,
       submittedAt: r.submitted_at,
+      contentHash: r.content_hash,
+      submitterIp: r.submitter_ip,
       signatureUrl: fileUrl(r.signature_key),
       aadhaarFront: fileUrl(r.aadhaar_front_key),
       aadhaarBack: fileUrl(r.aadhaar_back_key),
@@ -248,6 +290,7 @@ app.get('/api/forms/:id/pdf', requireAdmin, async (req, res) => {
         place: r.place,
       },
       { signature, aadhaarFront, aadhaarBack },
+      { contentHash: r.content_hash, submittedAt: r.submitted_at },
     );
 
     const safeName = (r.customer_name || 'Form').replace(/[^\w-]+/g, '_');

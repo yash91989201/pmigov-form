@@ -45,25 +45,70 @@ export function presignGet(key: string, expirySeconds: number): Promise<string> 
 }
 
 export async function ensureBucket() {
-  if (!(await s3.bucketExists(BUCKET))) {
-    await s3.makeBucket(BUCKET);
+  const exists = await s3.bucketExists(BUCKET);
+  if (!exists) {
+    // Object Lock can ONLY be enabled at bucket creation (it also turns on
+    // versioning). Existing buckets can't be retrofitted with a lock.
+    await s3.makeBucket(BUCKET, REGION, { ObjectLocking: true });
+  }
+
+  // Versioning keeps prior versions of every object, so an overwritten or
+  // "deleted" Aadhaar/signature image can always be recovered — tampering
+  // can't destroy the original bytes. Idempotent; works on existing buckets.
+  try {
+    await s3.setBucketVersioning(BUCKET, { Status: 'Enabled' });
+  } catch (err) {
+    console.warn('Could not enable bucket versioning:', (err as Error).message);
+  }
+
+  // Default GOVERNANCE retention locks each version against permanent deletion
+  // for the window below. Only valid on a lock-enabled (freshly created) bucket.
+  try {
+    await s3.setObjectLockConfig(BUCKET, {
+      mode: 'GOVERNANCE',
+      unit: 'Years',
+      validity: 5,
+    } as never);
+  } catch {
+    console.warn(
+      `Object Lock is not active on "${BUCKET}" (a lock requires a freshly created bucket). ` +
+        'Versioning still protects against overwrites/deletes; recreate the bucket for a hard lock.',
+    );
   }
 }
 
 const DATA_URL_RE = /^data:(image\/[a-z+.-]+);base64,(.+)$/s;
 
-/** Decodes a base64 data URL and stores it as an object. Returns the object key. */
-export async function putDataUrl(key: string, dataUrl: string): Promise<string> {
+/** Decodes a base64 image data URL into raw bytes + its content type. */
+export function decodeDataUrl(dataUrl: string): { buffer: Buffer; contentType: string } {
   const match = DATA_URL_RE.exec(dataUrl);
   if (!match) {
     throw new Error('Invalid image data: expected a base64 image data URL');
   }
   const [, contentType, base64] = match;
-  const buffer = Buffer.from(base64, 'base64');
+  return { buffer: Buffer.from(base64, 'base64'), contentType };
+}
+
+/** Stores raw bytes as an object. Returns the object key. */
+export async function putBuffer(key: string, buffer: Buffer, contentType: string): Promise<string> {
   await s3.putObject(BUCKET, key, buffer, buffer.length, {
     'Content-Type': contentType,
   });
   return key;
+}
+
+/** Decodes a base64 data URL and stores it as an object. Returns the object key. */
+export async function putDataUrl(key: string, dataUrl: string): Promise<string> {
+  const { buffer, contentType } = decodeDataUrl(dataUrl);
+  return putBuffer(key, buffer, contentType);
+}
+
+/** Reads an object fully into a buffer. */
+export async function getObjectBuffer(key: string): Promise<Buffer> {
+  const { stream } = await getObject(key);
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
 }
 
 export async function getObject(

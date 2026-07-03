@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+/* ── Design tokens: "Official Instrument" ──────────────────────────────
+   A consent & payment deed. Ink navy + a seal-green official accent, a
+   single gold emblem hairline, an engraved serif for letterhead/headings,
+   IBM Plex Sans for the form, IBM Plex Mono for reference data. */
+@theme {
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  --color-ink: #16243d;
+  --color-ink-deep: #0c1626;
+  --color-ink-soft: #5c6b82;
+  --color-seal: #0f5c46;
+  --color-seal-tint: #e7f0ec;
+  --color-gold: #a9852f;
+  --color-paper: #ffffff;
+  --color-parchment: #eef1f5;
+  --color-rule: #e3e7ee;
+}
+
+body {
+  background-color: var(--color-parchment);
+}
+
 @media print {
   body {
     background-color: white !important;

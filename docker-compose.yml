@@ -5,7 +5,12 @@ services:
       - "4000:4000"
     environment:
       PORT: 4000
+      # Owner connection — used only for migrations (DDL + role/grant setup).
       DATABASE_URL: postgres://pmigov:pmigov@db:5432/pmigov
+      # Least-privilege role the request handlers use: SELECT/INSERT/DELETE but
+      # NO UPDATE, so submitted records can't be silently edited via the app.
+      APP_DB_USER: pmigov_app
+      APP_DB_PASSWORD: pmigov-app-secret
       S3_ENDPOINT: minio
       S3_PORT: 9000
       S3_ACCESS_KEY: pmigov

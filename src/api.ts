@@ -1,3 +1,5 @@
+import axios, { type AxiosError } from 'axios';
+
 export interface ConsentFormSummary {
   id: string;
   date: string | null;
@@ -16,6 +18,8 @@ export interface ConsentFormDetail extends ConsentFormSummary {
   transactionRef: string | null;
   paymentDate: string | null;
   place: string | null;
+  contentHash: string | null;
+  submitterIp: string | null;
   signatureUrl: string | null;
   aadhaarFront: string | null;
   aadhaarBack: string | null;
@@ -46,49 +50,45 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) {
-    let message = `Request failed (${res.status})`;
-    try {
-      const body = await res.json();
-      if (body?.error) message = body.error;
-    } catch {
-      // non-JSON error response; keep the default message
-    }
-    throw new ApiError(message, res.status);
-  }
-  return res.json();
-}
+const http = axios.create({
+  baseURL: '/api',
+  withCredentials: true, // send the admin session cookie
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Normalize every axios failure into an ApiError, preferring the server's
+// `{ error }` message, so callers can keep checking `err.status`.
+http.interceptors.response.use(
+  (res) => res,
+  (err: AxiosError<{ error?: string }>) => {
+    const status = err.response?.status ?? 0;
+    const message =
+      err.response?.data?.error ??
+      (status ? `Request failed (${status})` : err.message || 'Network error');
+    return Promise.reject(new ApiError(message, status));
+  },
+);
 
 export function submitForm(payload: SubmitFormPayload): Promise<{ id: string }> {
-  return request('/api/forms', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  return http.post('/forms', payload).then((r) => r.data);
 }
 
 export function listForms(): Promise<ConsentFormSummary[]> {
-  return request('/api/forms');
+  return http.get('/forms').then((r) => r.data);
 }
 
 export function getForm(id: string): Promise<ConsentFormDetail> {
-  return request(`/api/forms/${id}`);
+  return http.get(`/forms/${id}`).then((r) => r.data);
 }
 
 export function deleteForm(id: string): Promise<{ ok: boolean }> {
-  return request(`/api/forms/${id}`, { method: 'DELETE' });
+  return http.delete(`/forms/${id}`).then((r) => r.data);
 }
 
 export function adminLogin(password: string): Promise<{ ok: boolean }> {
-  return request('/api/admin/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password }),
-  });
+  return http.post('/admin/login', { password }).then((r) => r.data);
 }
 
 export function adminLogout(): Promise<{ ok: boolean }> {
-  return request('/api/admin/logout', { method: 'POST' });
+  return http.post('/admin/logout').then((r) => r.data);
 }

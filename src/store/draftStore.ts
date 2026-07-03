@@ -6,6 +6,7 @@ export interface DraftFormData {
   customerName: string;
   fatherSpouseName: string;
   address: string;
+  countryCode: string;
   mobileNumber: string;
   emailId: string;
   serviceDescription: string;
@@ -23,6 +24,7 @@ const EMPTY_FORM: DraftFormData = {
   customerName: '',
   fatherSpouseName: '',
   address: '',
+  countryCode: '+91',
   mobileNumber: '',
   emailId: '',
   serviceDescription: '',
@@ -74,6 +76,7 @@ export function isDraftDirty(state: Pick<DraftState, 'formData' | 'aadhaarFront'
   return (Object.keys(state.formData) as (keyof DraftFormData)[]).some((key) => {
     const value = state.formData[key];
     if (key === 'modeOfPayment') return value !== 'Cash';
+    if (key === 'countryCode') return value !== '+91';
     if (key === 'agreed') return value === true;
     return value !== '' && value !== null;
   });
