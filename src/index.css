@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+  
+  .print-no-border {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .print-no-border-radius {
+    border-radius: 0 !important;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Make inputs look like regular text on print */
+  input, select, textarea {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    color: black !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #000 !important;
+    border-radius: 0 !important;
+  }
+  
+  input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+    border: 1px solid #000 !important;
+  }
+
+  .card-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  h1, h2, h3, p, span {
+    color: black !important;
+  }
+}

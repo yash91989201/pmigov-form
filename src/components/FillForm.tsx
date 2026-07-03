@@ -1,0 +1,481 @@
+import React, { useState } from 'react';
+import { SignaturePad } from './SignaturePad';
+import { CheckCircle2, Building2, ShieldCheck, FileSignature, AlertCircle, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ConsentFormView } from './ConsentFormView';
+import { Link } from 'react-router-dom';
+
+export function FillForm() {
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittedData, setSubmittedData] = useState<any>(null);
+
+  const [aadhaarFront, setAadhaarFront] = useState<string | null>(null);
+  const [aadhaarBack, setAadhaarBack] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    customerName: '',
+    fatherSpouseName: '',
+    address: '',
+    mobileNumber: '',
+    emailId: '',
+    serviceDescription: '',
+    amountPayable: '',
+    modeOfPayment: 'Cash',
+    transactionRef: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    place: '',
+    signatureUrl: null as string | null,
+    agreed: false
+  });
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (side === 'front') {
+          setAadhaarFront(event.target?.result as string);
+        } else {
+          setAadhaarBack(event.target?.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    setError(null);
+  };
+
+  const handleSignatureChange = (url: string | null) => {
+    setFormData(prev => ({ ...prev, signatureUrl: url }));
+    setError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.agreed) {
+      setError("Please check the consent box to proceed.");
+      return;
+    }
+    
+    if (!formData.signatureUrl) {
+      setError("Please provide your digital signature.");
+      return;
+    }
+
+    if (!formData.customerName || !formData.mobileNumber) {
+      setError("Please fill all required customer details.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const formPayload = {
+        ...formData,
+        aadhaarFront,
+        aadhaarBack,
+        submittedAt: serverTimestamp()
+      };
+      
+      // Remove 'agreed' from the payload as it's not in the blueprint
+      const { agreed, ...dataToSave } = formPayload;
+      
+      await addDoc(collection(db, 'consent_forms'), dataToSave);
+      
+      setSubmittedData(dataToSave);
+      setIsSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to submit form. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 sm:p-8 font-sans">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-xl overflow-hidden p-8 text-center space-y-6">
+          <div className="flex justify-center">
+            <CheckCircle2 className="w-16 h-16 text-emerald-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-800">Form Submitted</h2>
+          <p className="text-slate-600">Your consent form has been securely recorded.</p>
+          <button
+            onClick={() => window.close()}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+          >
+            Close Tab
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Edit Mode (Form)
+  return (
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center p-4 sm:p-8 font-sans">
+      <div className="w-full max-w-4xl mb-4 flex justify-end no-print">
+        <Link to="/admin" className="text-slate-500 hover:text-slate-800 text-sm font-medium transition-colors">
+          Admin Login
+        </Link>
+      </div>
+
+      <div className="max-w-4xl w-full bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
+        
+        {/* Header */}
+        <div className="bg-slate-900 text-white p-8 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Building2 className="w-32 h-32" />
+          </div>
+          <div className="relative z-10">
+            <div className="flex justify-center items-center gap-3 mb-3">
+              <Building2 className="w-8 h-8 text-blue-400" />
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">PMI SERVICES ENTERPRISES</h1>
+            </div>
+            <h2 className="text-lg text-slate-300 font-medium uppercase tracking-widest">
+              Consent & Payment Authorization
+            </h2>
+          </div>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-6 sm:p-10 space-y-10">
+          
+          {/* Customer Details section */}
+          <section>
+            <div className="flex items-center gap-2 border-b-2 border-slate-100 pb-3 mb-6">
+              <div className="bg-blue-100 text-blue-700 p-2 rounded-lg">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">1. Customer Details</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Date *</label>
+                <input 
+                  type="date" 
+                  name="date"
+                  value={formData.date}
+                  onChange={handleInputChange}
+                  className="w-full md:w-1/3 px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Customer Name *</label>
+                <input 
+                  type="text" 
+                  name="customerName"
+                  value={formData.customerName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="Enter full name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Father's/Spouse's Name</label>
+                <input 
+                  type="text" 
+                  name="fatherSpouseName"
+                  value={formData.fatherSpouseName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="Enter relative's name"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Address</label>
+                <textarea 
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400 resize-none"
+                  placeholder="Enter full residential address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Mobile Number *</label>
+                <input 
+                  type="tel" 
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="+91 00000 00000"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Email ID</label>
+                <input 
+                  type="email" 
+                  name="emailId"
+                  value={formData.emailId}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="name@example.com"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Identity Documents section */}
+          <section>
+            <div className="flex items-center gap-2 border-b-2 border-slate-100 pb-3 mb-6">
+              <div className="bg-indigo-100 text-indigo-700 p-2 rounded-lg">
+                <ImageIcon className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">2. Identity Documents (Optional)</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Front)</label>
+                {aadhaarFront ? (
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200">
+                    <img src={aadhaarFront} alt="Aadhaar Front" className="w-full h-40 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setAadhaarFront(null)}
+                      className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                      <p className="text-sm text-slate-500 font-medium">Click to upload front</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'front')} />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Aadhaar Card (Back)</label>
+                {aadhaarBack ? (
+                  <div className="relative rounded-lg overflow-hidden border border-slate-200">
+                    <img src={aadhaarBack} alt="Aadhaar Back" className="w-full h-40 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setAadhaarBack(null)}
+                      className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                      <p className="text-sm text-slate-500 font-medium">Click to upload back</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/*" onChange={(e) => handleImageUpload(e, 'back')} />
+                  </label>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Payment Details section */}
+          <section>
+            <div className="flex items-center gap-2 border-b-2 border-slate-100 pb-3 mb-6">
+              <div className="bg-emerald-100 text-emerald-700 p-2 rounded-lg">
+                <FileSignature className="w-5 h-5" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800">3. Payment Details</h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Service Description</label>
+                <input 
+                  type="text" 
+                  name="serviceDescription"
+                  value={formData.serviceDescription}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="Describe the services availed"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Amount Payable (₹) *</label>
+                <input 
+                  type="number" 
+                  name="amountPayable"
+                  value={formData.amountPayable}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400 font-bold"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Mode of Payment</label>
+                <select 
+                  name="modeOfPayment"
+                  value={formData.modeOfPayment}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 bg-white"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Debit Card">Debit Card</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Transaction Reference No.</label>
+                <input 
+                  type="text" 
+                  name="transactionRef"
+                  value={formData.transactionRef}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400"
+                  placeholder="e.g. UPI Ref / Cheque No."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Date of Payment</label>
+                <input 
+                  type="date" 
+                  name="paymentDate"
+                  value={formData.paymentDate}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Consent Declaration text box */}
+          <section className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+            <div className="flex items-center gap-3 mb-4 text-blue-900">
+              <ShieldCheck className="w-6 h-6 text-blue-600" />
+              <h3 className="text-lg font-bold">Consent Declaration</h3>
+            </div>
+            
+            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm max-h-64 overflow-y-auto text-sm text-slate-700 space-y-4 mb-6">
+              <p>
+                I, <strong>{formData.customerName || '[Customer Name]'}</strong>, hereby confirm that I have voluntarily availed/requested services from PMI Services Enterprises and agree to make payment for the services provided. I further declare and consent to the following:
+              </p>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>I have been informed about the nature, scope, and charges of the services provided by PMI Services Enterprises and have no objection to making payment for the same.</li>
+                <li>I understand and accept all applicable fees, taxes, and other charges relating to the services availed.</li>
+                <li>I voluntarily authorize PMI Services Enterprises to receive and process my payment through the agreed mode of payment.</li>
+                <li>I confirm that the funds used for making payment belong to me and are derived from lawful sources.</li>
+                <li>I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services Enterprises.</li>
+                <li>I declare that all information and documents furnished by me are true, accurate, and complete to the best of my knowledge.</li>
+                <li>I agree that PMI Services Enterprises shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.</li>
+                <li>I expressly agree that any dispute, claim, difference, or legal proceeding arising out of or relating to the services provided, this consent form, or any payment transaction shall be subject to the exclusive jurisdiction of the competent courts at Tikamgarh, Madhya Pradesh, and no other court shall have jurisdiction in such matters.</li>
+              </ol>
+              <div className="mt-4 pt-4 border-t border-slate-100 font-medium italic text-slate-800">
+                "I have carefully read and understood the contents of this Consent and Payment Authorization Form. I voluntarily execute this document and provide my consent without any coercion, undue influence, or misrepresentation."
+              </div>
+            </div>
+
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <div className="relative flex items-center justify-center mt-0.5">
+                <input 
+                  type="checkbox" 
+                  name="agreed"
+                  checked={formData.agreed}
+                  onChange={handleInputChange}
+                  className="peer w-6 h-6 appearance-none border-2 border-slate-300 rounded hover:border-blue-500 checked:bg-blue-600 checked:border-blue-600 transition-colors"
+                />
+                <CheckCircle2 className="w-4 h-4 text-white absolute pointer-events-none opacity-0 peer-checked:opacity-100" />
+              </div>
+              <span className="text-slate-800 font-medium leading-tight group-hover:text-blue-900 transition-colors">
+                I agree to the terms, conditions, and consent declarations outlined above. *
+              </span>
+            </label>
+          </section>
+
+          {/* Signature and Place */}
+          <section>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">Place *</label>
+                <input 
+                  type="text" 
+                  name="place"
+                  value={formData.place}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none text-slate-900 placeholder:text-slate-400 mb-4"
+                  placeholder="Enter current city/place"
+                  required
+                />
+                
+                <p className="text-sm text-slate-500 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                  By signing, you are providing a legally binding digital signature matching the declarations in this form.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Digital Signature *</label>
+                <SignaturePad onChange={handleSignatureChange} />
+              </div>
+            </div>
+          </section>
+
+          {error && (
+            <div className="bg-red-50 text-red-700 p-4 rounded-lg flex items-start gap-3 border border-red-200">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <p className="font-medium">{error}</p>
+            </div>
+          )}
+
+          <div className="pt-6 border-t border-slate-200">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-slate-900 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2 text-lg disabled:opacity-50 disabled:transform-none"
+            >
+              <ShieldCheck className="w-6 h-6" />
+              {isSubmitting ? 'Submitting...' : 'Submit Authorization'}
+            </button>
+            <p className="text-center text-slate-500 text-sm mt-4">
+              All information is securely processed.
+            </p>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  );
+}

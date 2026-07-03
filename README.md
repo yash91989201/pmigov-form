@@ -1,11 +1,25 @@
-<div align="center">
+# PMI GOV Consent Form
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A React application for capturing customer consent and payment authorization, complete with digital signatures and Aadhaar uploads.
 
-  <h1>Built with AI Studio</h2>
+## One-Click Deploy to Vercel
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+If you have exported this project to your GitHub repository, you can deploy it to Vercel with one click:
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
 
-</div>
+*(Note: When importing to Vercel, make sure the framework preset is set to **Vite**).*
+
+## Features
+- **Customer Details**: Form to collect name, mobile, address, etc.
+- **Identity Documents**: Upload front and back of Aadhaar card.
+- **Payment Details**: Record service description, amount, payment mode, and transaction reference.
+- **Digital Signature**: In-browser signature pad for customer consent.
+- **Admin Panel**: View submitted forms, delete entries, and generate/download PDFs.
+
+## Tech Stack
+- React + Vite
+- Tailwind CSS
+- Firebase Firestore (Database)
+- lucide-react (Icons)
+- jspdf & dom-to-image (PDF Generation)

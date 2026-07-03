@@ -1,0 +1,33 @@
+{
+  "project_id": "gen-lang-client-0512183091",
+  "collections": [
+    {
+      "name": "consent_forms",
+      "description": "Stores submitted customer consent forms.",
+      "security_rules": {
+        "read": "request.auth != null",
+        "create": "true",
+        "update": "request.auth != null",
+        "delete": "request.auth != null"
+      },
+      "schema": {
+        "customerName": "string",
+        "fatherSpouseName": "string",
+        "address": "string",
+        "mobileNumber": "string",
+        "emailId": "string",
+        "serviceDescription": "string",
+        "amountPayable": "string",
+        "modeOfPayment": "string",
+        "transactionRef": "string",
+        "paymentDate": "string",
+        "place": "string",
+        "date": "string",
+        "signatureUrl": "string",
+        "aadhaarFront": "string",
+        "aadhaarBack": "string",
+        "submittedAt": "timestamp"
+      }
+    }
+  ]
+}
