@@ -10,7 +10,7 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
         <div className="flex flex-col items-center gap-3 mb-2">
           <BrandLogo size="lg" />
           <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">PMI SERVICES ENTERPRISES</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">PMI SERVICES</h1>
             <h2 className="text-lg sm:text-xl font-bold text-gray-700 uppercase mt-2">
               Customer Consent and Payment Authorization Form
             </h2>
@@ -82,16 +82,16 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
           </div>
           
           <p className="mb-4 text-gray-800 leading-relaxed font-medium">
-            I, <span className="font-bold underline underline-offset-4 decoration-gray-400 px-2">{formData.customerName || '________________________'}</span>, hereby confirm that I have voluntarily availed/requested services from PMI Services Enterprises and agree to make payment for the services provided. I further declare and consent to the following:
+            I, <span className="font-bold underline underline-offset-4 decoration-gray-400 px-2">{formData.customerName || '________________________'}</span>, hereby confirm that I have voluntarily availed/requested services from PMI Services and agree to make payment for the services provided. I further declare and consent to the following:
           </p>
           <ol className="list-decimal pl-5 space-y-3 text-gray-700 text-sm sm:text-base text-justify">
-            <li>I have been informed about the nature, scope, and charges of the services provided by PMI Services Enterprises and have no objection to making payment for the same.</li>
+            <li>I have been informed about the nature, scope, and charges of the services provided by PMI Services and have no objection to making payment for the same.</li>
             <li>I understand and accept all applicable fees, taxes, and other charges relating to the services availed.</li>
-            <li>I voluntarily authorize PMI Services Enterprises to receive and process my payment through the agreed mode of payment.</li>
+            <li>I voluntarily authorize PMI Services to receive and process my payment through the agreed mode of payment.</li>
             <li>I confirm that the funds used for making payment belong to me and are derived from lawful sources.</li>
-            <li>I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services Enterprises.</li>
+            <li>I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services.</li>
             <li>I declare that all information and documents furnished by me are true, accurate, and complete to the best of my knowledge.</li>
-            <li>I agree that PMI Services Enterprises shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.</li>
+            <li>I agree that PMI Services shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.</li>
             <li>I expressly agree that any dispute, claim, difference, or legal proceeding arising out of or relating to the services provided, this consent form, or any payment transaction shall be subject to the exclusive jurisdiction of the competent courts at Tikamgarh, Madhya Pradesh, and no other court shall have jurisdiction in such matters.</li>
           </ol>
         </section>

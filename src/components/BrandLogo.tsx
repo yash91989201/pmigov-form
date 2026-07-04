@@ -15,7 +15,7 @@ type Props = {
 
 export function BrandLogo({ size = 'md', variant = 'badge', className = '' }: Props) {
   const img = (
-    <img src={logoUrl} alt="PMI Services Enterprises" className="w-full h-full object-contain" />
+    <img src={logoUrl} alt="PMI Services" className="w-full h-full object-contain" />
   );
 
   if (variant === 'plain') {

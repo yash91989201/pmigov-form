@@ -106,7 +106,7 @@ export function AdminPanel() {
             <div>
               <h1 className="font-display text-2xl font-semibold text-ink leading-tight">Consent Register</h1>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft mt-0.5">
-                PMI Services Enterprises · {forms.length} {forms.length === 1 ? 'record' : 'records'} on file
+                PMI Services · {forms.length} {forms.length === 1 ? 'record' : 'records'} on file
               </p>
             </div>
           </div>

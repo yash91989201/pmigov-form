@@ -248,7 +248,7 @@ export function FillForm() {
                 Consent Instrument
               </p>
               <h1 className="font-display text-2xl sm:text-3xl md:text-[2rem] font-semibold leading-tight tracking-tight">
-                PMI Services Enterprises
+                PMI Services
               </h1>
               <h2 className="text-xs sm:text-sm text-slate-300/90 font-medium uppercase tracking-[0.18em] mt-1">
                 Consent &amp; Payment Authorization
@@ -525,10 +525,7 @@ export function FillForm() {
                   <option value="Cash">Cash</option>
                   <option value="UPI">UPI</option>
                   <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Debit Card">Debit Card</option>
                   <option value="Credit Card">Credit Card</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Other">Other</option>
                 </select>
                 {renderError('modeOfPayment')}
               </div>
@@ -574,16 +571,16 @@ export function FillForm() {
               className="bg-[#fbfaf7] p-5 sm:p-7 rounded-md border border-rule max-h-64 overflow-y-auto text-[13px] leading-relaxed text-ink/90 space-y-4 mb-5"
             >
               <p className="first-letter:font-display first-letter:text-2xl first-letter:text-ink first-letter:mr-0.5">
-                I, <strong className="font-semibold">{formData.customerName || '[Customer Name]'}</strong>, hereby confirm that I have voluntarily availed/requested services from PMI Services Enterprises and agree to make payment for the services provided. I further declare and consent to the following:
+                I, <strong className="font-semibold">{formData.customerName || '[Customer Name]'}</strong>, hereby confirm that I have voluntarily availed/requested services from PMI Services and agree to make payment for the services provided. I further declare and consent to the following:
               </p>
               <ol className="list-decimal pl-5 space-y-2 marker:text-seal marker:font-semibold">
-                <li>I have been informed about the nature, scope, and charges of the services provided by PMI Services Enterprises and have no objection to making payment for the same.</li>
+                <li>I have been informed about the nature, scope, and charges of the services provided by PMI Services and have no objection to making payment for the same.</li>
                 <li>I understand and accept all applicable fees, taxes, and other charges relating to the services availed.</li>
-                <li>I voluntarily authorize PMI Services Enterprises to receive and process my payment through the agreed mode of payment.</li>
+                <li>I voluntarily authorize PMI Services to receive and process my payment through the agreed mode of payment.</li>
                 <li>I confirm that the funds used for making payment belong to me and are derived from lawful sources.</li>
-                <li>I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services Enterprises.</li>
+                <li>I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services.</li>
                 <li>I declare that all information and documents furnished by me are true, accurate, and complete to the best of my knowledge.</li>
-                <li>I agree that PMI Services Enterprises shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.</li>
+                <li>I agree that PMI Services shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.</li>
                 <li>I expressly agree that any dispute, claim, difference, or legal proceeding arising out of or relating to the services provided, this consent form, or any payment transaction shall be subject to the exclusive jurisdiction of the competent courts at Tikamgarh, Madhya Pradesh, and no other court shall have jurisdiction in such matters.</li>
               </ol>
               <div className="mt-4 pt-4 border-t border-rule font-display italic text-ink">

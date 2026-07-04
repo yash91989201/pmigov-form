@@ -25,13 +25,13 @@ export interface PdfImage {
 }
 
 const CONSENT_ITEMS = [
-  'I have been informed about the nature, scope, and charges of the services provided by PMI Services Enterprises and have no objection to making payment for the same.',
+  'I have been informed about the nature, scope, and charges of the services provided by PMI Services and have no objection to making payment for the same.',
   'I understand and accept all applicable fees, taxes, and other charges relating to the services availed.',
-  'I voluntarily authorize PMI Services Enterprises to receive and process my payment through the agreed mode of payment.',
+  'I voluntarily authorize PMI Services to receive and process my payment through the agreed mode of payment.',
   'I confirm that the funds used for making payment belong to me and are derived from lawful sources.',
-  'I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services Enterprises.',
+  'I understand that any refund, cancellation, or adjustment, if applicable, shall be governed by the terms and conditions of PMI Services.',
   'I declare that all information and documents furnished by me are true, accurate, and complete to the best of my knowledge.',
-  'I agree that PMI Services Enterprises shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.',
+  'I agree that PMI Services shall not be held liable for any loss, delay, or issue arising from incorrect information provided by me or from unauthorized use of my payment instrument.',
   'I expressly agree that any dispute, claim, difference, or legal proceeding arising out of or relating to the services provided, this consent form, or any payment transaction shall be subject to the exclusive jurisdiction of the competent courts at Tikamgarh, Madhya Pradesh, and no other court shall have jurisdiction in such matters.',
 ];
 
@@ -64,7 +64,7 @@ function drawPdfHeader(doc: PDFKit.PDFDocument, x: number, width: number) {
   }
 
   doc.font('Helvetica-Bold').fontSize(20).fillColor('#0f172a');
-  doc.text('PMI SERVICES ENTERPRISES', x, doc.y, { width, align: 'center' });
+  doc.text('PMI SERVICES', x, doc.y, { width, align: 'center' });
   doc.moveDown(0.3);
   doc.fontSize(12).fillColor('#334155');
   doc.text('CUSTOMER CONSENT AND PAYMENT AUTHORIZATION FORM', { align: 'center' });
@@ -212,7 +212,7 @@ export function buildFormPdf(
   sectionTitle(doc, 'Consent Declaration');
   doc.font('Helvetica').fontSize(9.5).fillColor('#1f2937');
   doc.text(
-    `I, ${form.customerName}, hereby confirm that I have voluntarily availed/requested services from PMI Services Enterprises and agree to make payment for the services provided. I further declare and consent to the following:`,
+    `I, ${form.customerName}, hereby confirm that I have voluntarily availed/requested services from PMI Services and agree to make payment for the services provided. I further declare and consent to the following:`,
     { align: 'justify' },
   );
   doc.moveDown(0.5);
