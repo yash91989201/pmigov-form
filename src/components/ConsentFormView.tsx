@@ -1,17 +1,21 @@
 import React from 'react';
-import { Building2, ShieldCheck, FileSignature, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, FileSignature } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
+import type { ConsentFormDetail } from '../api';
 
-export function ConsentFormView({ formData }: { formData: any }) {
+export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
   return (
     <div className="bg-white" id="pdf-content">
       <div className="text-center mb-10 pb-6 border-b-2 border-gray-900">
-        <div className="flex justify-center items-center gap-3 mb-2">
-          <Building2 className="w-8 h-8 text-blue-800" />
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">PMI SERVICES ENTERPRISES</h1>
+        <div className="flex flex-col items-center gap-3 mb-2">
+          <BrandLogo size="lg" />
+          <div className="text-center">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">PMI SERVICES ENTERPRISES</h1>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-700 uppercase mt-2">
+              Customer Consent and Payment Authorization Form
+            </h2>
+          </div>
         </div>
-        <h2 className="text-lg sm:text-xl font-bold text-gray-700 uppercase mt-2">
-          Customer Consent and Payment Authorization Form
-        </h2>
       </div>
 
       <div className="space-y-8">

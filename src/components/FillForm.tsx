@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { ImageCropDialog } from './ImageCropDialog';
-import { CheckCircle2, Building2, ShieldCheck, AlertCircle, Upload, X, RotateCcw } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
+import { CheckCircle2, ShieldCheck, AlertCircle, Upload, X, RotateCcw } from 'lucide-react';
 import { submitForm } from '../api';
+import { errorMessage } from '../errors';
 import { useDraftStore, isDraftDirty } from '../store/draftStore';
 import { validateForm, FIELD_ORDER, COUNTRIES, type FieldErrors } from '../validation';
 
@@ -30,7 +32,7 @@ export function FillForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedData, setSubmittedData] = useState<any>(null);
+  const [submittedData, setSubmittedData] = useState<{ id: string } | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   // Draft is persisted to localStorage so a refresh / accidental close doesn't
@@ -189,9 +191,9 @@ export function FillForm() {
       setIsSubmitted(true);
       reset(); // Draft is now persisted server-side — clear the local draft.
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || 'Failed to submit form. Please try again.');
+      setError(errorMessage(err, 'Failed to submit form. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -240,11 +242,7 @@ export function FillForm() {
         {/* Letterhead — engraved seal, serif title, monospace reference bar */}
         <header className="bg-ink-deep text-white px-6 sm:px-10 pt-8 sm:pt-10 pb-0 relative overflow-hidden">
           <div className="flex items-start gap-4 sm:gap-5">
-            {/* Seal emblem */}
-            <div className="flex-shrink-0 relative w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-gold/70 flex items-center justify-center">
-              <div className="absolute inset-1 rounded-full border border-gold/30" />
-              <Building2 className="w-6 h-6 sm:w-7 sm:h-7 text-gold" />
-            </div>
+            <BrandLogo size="md" />
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.25em] text-gold mb-1.5">
                 Consent Instrument

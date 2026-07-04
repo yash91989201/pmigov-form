@@ -1,5 +1,8 @@
 import PDFDocument from 'pdfkit';
 import { imageSize } from 'image-size';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 
 export interface FormRecord {
   date: string | null;
@@ -38,6 +41,40 @@ const DECLARATION =
 // PDFKit's standard fonts only support PNG/JPEG embedding.
 function embeddable(img: PdfImage | null): img is PdfImage {
   return Boolean(img && /^image\/(png|jpe?g)$/.test(img.contentType));
+}
+
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const brandLogoPath = join(__dirname, '..', 'assets', 'logo.png');
+
+function drawPdfHeader(doc: PDFKit.PDFDocument, x: number, width: number) {
+  const logoSize = 52;
+  const headerTop = doc.page.margins.top;
+  const centerX = x + width / 2;
+
+  if (existsSync(brandLogoPath)) {
+    doc.image(brandLogoPath, centerX - logoSize / 2, headerTop, {
+      fit: [logoSize, logoSize],
+      align: 'center',
+      valign: 'center',
+    });
+    doc.y = headerTop + logoSize + 10;
+  } else {
+    doc.y = headerTop;
+  }
+
+  doc.font('Helvetica-Bold').fontSize(20).fillColor('#0f172a');
+  doc.text('PMI SERVICES ENTERPRISES', x, doc.y, { width, align: 'center' });
+  doc.moveDown(0.3);
+  doc.fontSize(12).fillColor('#334155');
+  doc.text('CUSTOMER CONSENT AND PAYMENT AUTHORIZATION FORM', { align: 'center' });
+  doc.moveDown(0.5);
+  doc
+    .moveTo(x, doc.y)
+    .lineTo(x + width, doc.y)
+    .lineWidth(2)
+    .strokeColor('#0f172a')
+    .stroke();
 }
 
 function sectionTitle(doc: PDFKit.PDFDocument, title: string) {
@@ -113,19 +150,7 @@ export function buildFormPdf(
   const x = doc.page.margins.left;
   const width = doc.page.width - x - doc.page.margins.right;
 
-  // Header
-  doc.font('Helvetica-Bold').fontSize(20).fillColor('#0f172a');
-  doc.text('PMI SERVICES ENTERPRISES', { align: 'center' });
-  doc.moveDown(0.3);
-  doc.fontSize(12).fillColor('#334155');
-  doc.text('CUSTOMER CONSENT AND PAYMENT AUTHORIZATION FORM', { align: 'center' });
-  doc.moveDown(0.5);
-  doc
-    .moveTo(x, doc.y)
-    .lineTo(x + width, doc.y)
-    .lineWidth(2)
-    .strokeColor('#0f172a')
-    .stroke();
+  drawPdfHeader(doc, x, width);
 
   doc.moveDown(0.6);
   doc.font('Helvetica').fontSize(10).fillColor('#334155');

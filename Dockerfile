@@ -14,6 +14,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev
 COPY --from=build /app/dist ./dist
 COPY server ./server
+COPY assets ./assets
 COPY tsconfig.json ./
 EXPOSE 4000
 CMD ["npx", "tsx", "server/index.ts"]

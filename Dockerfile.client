@@ -6,6 +6,8 @@ ENV VITE_API_URL=$VITE_API_URL
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts && npm rebuild esbuild
 COPY index.html vite.config.ts tsconfig.json ./
+COPY assets ./assets
+COPY public ./public
 COPY src ./src
 RUN npm run build
 

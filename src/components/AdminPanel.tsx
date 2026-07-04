@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, Building2, Trash2, Download, Lock, LogOut, AlertCircle } from 'lucide-react';
+import { Eye, Trash2, Download, LogOut, AlertCircle } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 import { Link } from 'react-router-dom';
 import { apiUrl } from '../api';
 import { useAdminStore } from '../store/adminStore';
+import { errorMessage } from '../errors';
 export function AdminPanel() {
   const { forms, loading, error, authed, fetchForms, login, logout, remove } = useAdminStore();
   const [password, setPassword] = useState('');
@@ -20,8 +22,8 @@ export function AdminPanel() {
     try {
       await login(password);
       setPassword('');
-    } catch (err: any) {
-      setLoginError(err.message || 'Login failed.');
+    } catch (err: unknown) {
+      setLoginError(errorMessage(err, 'Login failed.'));
     } finally {
       setLoggingIn(false);
     }
@@ -55,11 +57,7 @@ export function AdminPanel() {
       <div className="min-h-screen flex items-center justify-center p-4 font-sans">
         <div className="max-w-sm w-full bg-paper rounded-sm shadow-xl border border-rule border-t-4 border-t-ink p-8 sm:p-10">
           <div className="flex flex-col items-center gap-3 mb-7">
-            {/* Seal emblem */}
-            <div className="relative w-16 h-16 rounded-full border-2 border-gold/70 flex items-center justify-center">
-              <div className="absolute inset-1 rounded-full border border-gold/30" />
-              <Lock className="w-6 h-6 text-gold" />
-            </div>
+            <BrandLogo size="lg" />
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-seal">Restricted Access</p>
             <h1 className="font-display text-2xl font-semibold text-ink">Consent Register</h1>
             <p className="text-sm text-ink-soft text-center">Enter the admin password to access submissions.</p>
@@ -104,9 +102,7 @@ export function AdminPanel() {
         {/* Header bar */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <div className="relative w-11 h-11 rounded-full border-2 border-gold/60 flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-5 h-5 text-ink" />
-            </div>
+            <BrandLogo size="sm" />
             <div>
               <h1 className="font-display text-2xl font-semibold text-ink leading-tight">Consent Register</h1>
               <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-soft mt-0.5">

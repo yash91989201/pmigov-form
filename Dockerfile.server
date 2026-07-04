@@ -5,6 +5,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts --omit=dev
 COPY server ./server
+COPY assets ./assets
 COPY tsconfig.json ./
 EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
