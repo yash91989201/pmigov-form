@@ -32,6 +32,26 @@ const DIST_DIR = path.resolve(__dirname, '../dist');
 const app = express();
 // Honor X-Forwarded-For so req.ip reflects the real client behind a proxy.
 app.set('trust proxy', true);
+
+const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+if (corsOrigins.length) {
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && corsOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.setHeader('Vary', 'Origin');
+    }
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
+}
+
 // Signature + Aadhaar images arrive as base64 data URLs in the JSON body.
 app.use(express.json({ limit: '30mb' }));
 

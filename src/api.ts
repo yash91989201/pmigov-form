@@ -50,14 +50,16 @@ export class ApiError extends Error {
   }
 }
 
+/** API root including `/api` (e.g. https://api.consent.pmigov.com/api). */
+export const API_BASE =
+  import.meta.env.VITE_API_URL?.replace(/\/$/, '') || '/api';
+
 const http = axios.create({
-  baseURL: '/api',
-  withCredentials: true, // send the admin session cookie
+  baseURL: API_BASE,
+  withCredentials: true,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Normalize every axios failure into an ApiError, preferring the server's
-// `{ error }` message, so callers can keep checking `err.status`.
 http.interceptors.response.use(
   (res) => res,
   (err: AxiosError<{ error?: string }>) => {
@@ -91,4 +93,9 @@ export function adminLogin(password: string): Promise<{ ok: boolean }> {
 
 export function adminLogout(): Promise<{ ok: boolean }> {
   return http.post('/admin/logout').then((r) => r.data);
+}
+
+export function apiUrl(path: string): string {
+  const p = path.startsWith('/') ? path : `/${path}`;
+  return `${API_BASE}${p}`;
 }

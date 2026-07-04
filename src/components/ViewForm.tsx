@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ApiError, ConsentFormDetail } from '../api';
+import { ApiError, ConsentFormDetail, apiUrl } from '../api';
 import { Download, ArrowLeft } from 'lucide-react';
 import { ConsentFormView } from './ConsentFormView';
 import { useAdminStore } from '../store/adminStore';
@@ -53,7 +53,7 @@ export function ViewForm() {
           Back to Admin
         </Link>
         <a
-          href={`/api/forms/${id}/pdf`}
+          href={apiUrl(`/forms/${id}/pdf`)}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
         >
           <Download className="w-4 h-4" />

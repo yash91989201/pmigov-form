@@ -4,21 +4,6 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    # Prefix /api — API_UPSTREAM without trailing slash (e.g. https://api.consent.pmigov.com).
-    location /api {
-        proxy_pass ${API_UPSTREAM};
-        proxy_http_version 1.1;
-        proxy_ssl_server_name on;
-        proxy_set_header Host $proxy_host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_buffer_size 128k;
-        proxy_buffers 8 128k;
-        proxy_busy_buffers_size 256k;
-        client_max_body_size 35m;
-    }
-
     location / {
         try_files $uri $uri/ /index.html;
     }

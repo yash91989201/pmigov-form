@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Eye, Building2, Trash2, Download, Lock, LogOut, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { apiUrl } from '../api';
 import { useAdminStore } from '../store/adminStore';
-
 export function AdminPanel() {
   const { forms, loading, error, authed, fetchForms, login, logout, remove } = useAdminStore();
   const [password, setPassword] = useState('');
@@ -171,8 +171,7 @@ export function AdminPanel() {
                             <Eye className="w-5 h-5" />
                           </Link>
                           <a
-                            href={`/api/forms/${form.id}/pdf`}
-                            className="p-2 text-seal hover:bg-seal-tint rounded transition-colors"
+                            href={apiUrl(`/forms/${form.id}/pdf`)}
                             title="Download PDF"
                           >
                             <Download className="w-5 h-5" />

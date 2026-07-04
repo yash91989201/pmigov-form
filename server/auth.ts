@@ -5,7 +5,6 @@ export const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'pmigov-admin';
 
 const SESSION_COOKIE = 'admin_session';
 const SESSION_TTL_SECONDS = 7 * 24 * 3600;
-// Keying the session secret off the password invalidates all sessions when it changes.
 const sessionKey = createHmac('sha256', 'pmigov-session-v1').update(ADMIN_PASSWORD).digest();
 
 function sign(expiresAt: number): string {
@@ -46,15 +45,25 @@ export function checkPassword(password: unknown): boolean {
   return timingSafeEqual(a, b);
 }
 
+function sessionCookieAttrs(): string {
+  const crossSite = Boolean(process.env.CORS_ORIGINS?.trim());
+  const sameSite = crossSite ? 'SameSite=None' : 'SameSite=Lax';
+  const secure = crossSite ? '; Secure' : '';
+  return `HttpOnly; Path=/; ${sameSite}${secure}`;
+}
+
 export function setSessionCookie(res: Response) {
   res.setHeader(
     'Set-Cookie',
-    `${SESSION_COOKIE}=${makeToken()}; HttpOnly; Path=/; Max-Age=${SESSION_TTL_SECONDS}; SameSite=Lax`,
+    `${SESSION_COOKIE}=${makeToken()}; ${sessionCookieAttrs()}; Max-Age=${SESSION_TTL_SECONDS}`,
   );
 }
 
 export function clearSessionCookie(res: Response) {
-  res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax`);
+  res.setHeader(
+    'Set-Cookie',
+    `${SESSION_COOKIE}=; ${sessionCookieAttrs()}; Max-Age=0`,
+  );
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
