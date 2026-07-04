@@ -6,4 +6,4 @@ dist
 !.env.example
 *.log
 .claude
-assets
+assets/.aistudio
