@@ -92,6 +92,7 @@ interface SubmitBody {
   signature?: string;
   aadhaarFront?: string | null;
   aadhaarBack?: string | null;
+  panCard?: string | null;
 }
 
 const REQUIRED_FIELDS: [keyof SubmitBody, string][] = [
@@ -110,6 +111,7 @@ const REQUIRED_FIELDS: [keyof SubmitBody, string][] = [
   ['signature', 'Digital signature'],
   ['aadhaarFront', 'Aadhaar card (front)'],
   ['aadhaarBack', 'Aadhaar card (back)'],
+  ['panCard', 'PAN card'],
 ];
 
 app.post('/api/forms', async (req, res) => {
@@ -132,6 +134,7 @@ app.post('/api/forms', async (req, res) => {
     const signature = decodeDataUrl(body.signature!);
     const aadhaarFront = decodeDataUrl(body.aadhaarFront!);
     const aadhaarBack = decodeDataUrl(body.aadhaarBack!);
+    const panCard = decodeDataUrl(body.panCard!);
 
     // The exact values that get persisted — hashed in this same shape so the
     // integrity check is reproducible from the stored row.
@@ -153,6 +156,7 @@ app.post('/api/forms', async (req, res) => {
       signature: signature.buffer,
       aadhaarFront: aadhaarFront.buffer,
       aadhaarBack: aadhaarBack.buffer,
+      panCard: panCard.buffer,
     });
 
     const signatureKey = await putBuffer(`forms/${id}/signature.png`, signature.buffer, signature.contentType);
@@ -164,14 +168,17 @@ app.post('/api/forms', async (req, res) => {
     const aadhaarBackKey = await putBuffer(`forms/${id}/aadhaar-back`, aadhaarBack.buffer, aadhaarBack.contentType);
     storedKeys.push(aadhaarBackKey);
 
+    const panCardKey = await putBuffer(`forms/${id}/pan-card`, panCard.buffer, panCard.contentType);
+    storedKeys.push(panCardKey);
+
     await pool.query(
       `INSERT INTO consent_forms (
         id, date, customer_name, father_spouse_name, address, mobile_number,
         email_id, service_description, amount_payable, mode_of_payment,
         transaction_ref, payment_date, place,
-        signature_key, aadhaar_front_key, aadhaar_back_key,
+        signature_key, aadhaar_front_key, aadhaar_back_key, pan_card_key,
         content_hash, submitter_ip
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         id,
         fields.date,
@@ -189,6 +196,7 @@ app.post('/api/forms', async (req, res) => {
         signatureKey,
         aadhaarFrontKey,
         aadhaarBackKey,
+        panCardKey,
         contentHash,
         req.ip ?? null,
       ],
@@ -256,6 +264,7 @@ app.get('/api/forms/:id', requireAdmin, async (req, res) => {
       signatureUrl: fileUrl(r.signature_key),
       aadhaarFront: fileUrl(r.aadhaar_front_key),
       aadhaarBack: fileUrl(r.aadhaar_back_key),
+      panCard: fileUrl(r.pan_card_key),
     });
   } catch (err) {
     console.error('Failed to load form:', err);
@@ -288,10 +297,11 @@ app.get('/api/forms/:id/pdf', requireAdmin, async (req, res) => {
     }
     const r = rows[0];
 
-    const [signature, aadhaarFront, aadhaarBack] = await Promise.all([
+    const [signature, aadhaarFront, aadhaarBack, panCard] = await Promise.all([
       loadImage(r.signature_key),
       loadImage(r.aadhaar_front_key),
       loadImage(r.aadhaar_back_key),
+      loadImage(r.pan_card_key),
     ]);
 
     const doc = buildFormPdf(
@@ -309,7 +319,7 @@ app.get('/api/forms/:id/pdf', requireAdmin, async (req, res) => {
         paymentDate: r.payment_date,
         place: r.place,
       },
-      { signature, aadhaarFront, aadhaarBack },
+      { signature, aadhaarFront, aadhaarBack, panCard },
       { contentHash: r.content_hash, submittedAt: r.submitted_at },
     );
 
@@ -328,14 +338,14 @@ app.delete('/api/forms/:id', requireAdmin, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `DELETE FROM consent_forms WHERE id = $1
-       RETURNING signature_key, aadhaar_front_key, aadhaar_back_key`,
+       RETURNING signature_key, aadhaar_front_key, aadhaar_back_key, pan_card_key`,
       [req.params.id],
     );
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Form not found.' });
     }
     const r = rows[0];
-    await removeObjects([r.signature_key, r.aadhaar_front_key, r.aadhaar_back_key]).catch(
+    await removeObjects([r.signature_key, r.aadhaar_front_key, r.aadhaar_back_key, r.pan_card_key]).catch(
       (err) => console.error('Failed to remove objects for form', req.params.id, err),
     );
     // Evict any cached presigned URLs for this form's objects.

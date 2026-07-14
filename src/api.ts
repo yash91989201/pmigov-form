@@ -23,6 +23,7 @@ export interface ConsentFormDetail extends ConsentFormSummary {
   signatureUrl: string | null;
   aadhaarFront: string | null;
   aadhaarBack: string | null;
+  panCard: string | null;
 }
 
 export interface SubmitFormPayload {
@@ -41,6 +42,7 @@ export interface SubmitFormPayload {
   signature: string;
   aadhaarFront: string;
   aadhaarBack: string;
+  panCard: string;
 }
 
 export class ApiError extends Error {

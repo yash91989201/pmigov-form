@@ -1,7 +1,18 @@
 import React from 'react';
-import { ShieldCheck, FileSignature } from 'lucide-react';
+import { ShieldCheck, FileSignature, Landmark, QrCode } from 'lucide-react';
 import { BrandLogo } from './BrandLogo';
 import type { ConsentFormDetail } from '../api';
+import upiQr from '../assets/upi-qr.jpeg';
+
+const PMI_BANK_DETAILS = {
+  bankName: 'AXIS BANK',
+  accountHolderName: 'PMI SERVICES ENTERPRISES',
+  accountNumber: '926020017030914',
+  ifscCode: 'UTIB0001398',
+  branch: 'Tikamgarh',
+};
+
+const PMI_UPI_ID = '7460070899@ptyes';
 
 export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
   return (
@@ -54,7 +65,7 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
         </section>
 
         {/* Identity Documents */}
-        {(formData.aadhaarFront || formData.aadhaarBack) && (
+        {(formData.aadhaarFront || formData.aadhaarBack || formData.panCard) && (
           <section className="print-avoid-break">
             <h3 className="text-lg font-bold text-blue-900 border-b-2 border-blue-900 pb-1 inline-block uppercase tracking-wide mb-4">Identity Documents</h3>
             <div className="flex flex-col sm:flex-row gap-6 justify-center mt-4">
@@ -68,6 +79,12 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
                 <div className="flex-1 max-w-sm">
                   <p className="text-xs font-semibold text-gray-600 mb-2">Aadhaar (Back)</p>
                   <img src={formData.aadhaarBack} alt="Aadhaar Back" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
+                </div>
+              )}
+              {formData.panCard && (
+                <div className="flex-1 max-w-sm">
+                  <p className="text-xs font-semibold text-gray-600 mb-2">PAN Card</p>
+                  <img src={formData.panCard} alt="PAN Card" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
                 </div>
               )}
             </div>
@@ -120,6 +137,49 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
             <div className="flex">
               <div className="w-1/3 bg-gray-100 p-2 text-sm font-semibold text-gray-700 border-r border-gray-400">Date of Payment</div>
               <div className="w-2/3 p-2 text-sm font-bold">{formData.paymentDate}</div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bank Account Details */}
+        <section className="print-avoid-break">
+          <h3 className="text-lg font-bold text-blue-900 border-b-2 border-blue-900 pb-1 inline-block uppercase tracking-wide mb-4">Bank Account Details</h3>
+
+          <div className="flex flex-col sm:flex-row gap-6 mt-4">
+            <div className="flex-1 border border-gray-400 rounded-lg overflow-hidden print-no-border-radius">
+              <div className="flex items-center gap-2 bg-gray-100 px-3 py-2 border-b border-gray-400">
+                <Landmark className="w-4 h-4 text-blue-800" />
+                <span className="text-sm font-semibold text-gray-700">PMI Services</span>
+              </div>
+              <div className="flex border-b border-gray-300">
+                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Bank Name</div>
+                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.bankName}</div>
+              </div>
+              <div className="flex border-b border-gray-300">
+                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Account Holder Name</div>
+                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.accountHolderName}</div>
+              </div>
+              <div className="flex border-b border-gray-300">
+                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Account Number</div>
+                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.accountNumber}</div>
+              </div>
+              <div className="flex border-b border-gray-300">
+                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">IFSC Code</div>
+                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.ifscCode}</div>
+              </div>
+              <div className="flex">
+                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Branch</div>
+                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.branch}</div>
+              </div>
+            </div>
+
+            <div className="flex-1 border border-gray-400 rounded-lg overflow-hidden print-no-border-radius flex flex-col items-center p-4">
+              <div className="flex items-center gap-2 mb-3 self-start">
+                <QrCode className="w-4 h-4 text-blue-800" />
+                <span className="text-sm font-semibold text-gray-700">Scan to Pay via UPI</span>
+              </div>
+              <img src={upiQr} alt="PMI Services UPI QR code" className="w-40 h-40 object-contain border border-gray-300 rounded-lg" />
+              <p className="mt-3 text-sm font-bold text-gray-800">{PMI_UPI_ID}</p>
             </div>
           </div>
         </section>

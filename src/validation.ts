@@ -85,6 +85,7 @@ export function validateForm(
   data: DraftFormData,
   aadhaarFront: string | null,
   aadhaarBack: string | null,
+  panCard: string | null,
 ): FieldErrors {
   const e: FieldErrors = {};
 
@@ -129,6 +130,7 @@ export function validateForm(
 
   if (!aadhaarFront) e.aadhaarFront = 'Upload the front of the Aadhaar card.';
   if (!aadhaarBack) e.aadhaarBack = 'Upload the back of the Aadhaar card.';
+  if (!panCard) e.panCard = 'Upload the PAN card.';
   if (!data.signatureUrl) e.signature = 'Your signature is required.';
   if (!data.agreed) e.agreed = 'You must agree to the declaration to proceed.';
 
@@ -145,6 +147,7 @@ export const FIELD_ORDER = [
   'emailId',
   'aadhaarFront',
   'aadhaarBack',
+  'panCard',
   'serviceDescription',
   'amountPayable',
   'modeOfPayment',

@@ -1,8 +1,8 @@
 import PDFDocument from 'pdfkit';
 import { imageSize } from 'image-size';
-import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 export interface FormRecord {
   date: string | null;
@@ -24,6 +24,20 @@ export interface PdfImage {
   contentType: string;
 }
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const UPI_QR_PATH = path.resolve(__dirname, 'assets/upi-qr.jpeg');
+const brandLogoPath = path.join(__dirname, '..', 'assets', 'logo.png');
+
+const PMI_BANK_DETAILS = {
+  bankName: 'AXIS BANK',
+  accountHolderName: 'PMI SERVICES ENTERPRISES',
+  accountNumber: '926020017030914',
+  ifscCode: 'UTIB0001398',
+  branch: 'Tikamgarh',
+};
+
+const PMI_UPI_ID = '7460070899@ptyes';
+
 const CONSENT_ITEMS = [
   'I have been informed about the nature, scope, and charges of the services provided by PMI Services and have no objection to making payment for the same.',
   'I understand and accept all applicable fees, taxes, and other charges relating to the services availed.',
@@ -43,16 +57,12 @@ function embeddable(img: PdfImage | null): img is PdfImage {
   return Boolean(img && /^image\/(png|jpe?g)$/.test(img.contentType));
 }
 
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const brandLogoPath = join(__dirname, '..', 'assets', 'logo.png');
-
 function drawPdfHeader(doc: PDFKit.PDFDocument, x: number, width: number) {
   const logoSize = 52;
   const headerTop = doc.page.margins.top;
   const centerX = x + width / 2;
 
-  if (existsSync(brandLogoPath)) {
+  if (fs.existsSync(brandLogoPath)) {
     doc.image(brandLogoPath, centerX - logoSize / 2, headerTop, {
       fit: [logoSize, logoSize],
       align: 'center',
@@ -143,6 +153,7 @@ export function buildFormPdf(
     signature: PdfImage | null;
     aadhaarFront: PdfImage | null;
     aadhaarBack: PdfImage | null;
+    panCard: PdfImage | null;
   },
   verification?: VerificationMeta,
 ): PDFKit.PDFDocument {
@@ -166,16 +177,17 @@ export function buildFormPdf(
     ['Email ID', form.emailId],
   ]);
 
-  // Identity documents: front and back side by side, below customer details.
-  if (embeddable(images.aadhaarFront) || embeddable(images.aadhaarBack)) {
+  // Identity documents: front, back, and PAN side by side, below customer details.
+  if (embeddable(images.aadhaarFront) || embeddable(images.aadhaarBack) || embeddable(images.panCard)) {
     sectionTitle(doc, 'Identity Documents');
-    const gap = 20;
-    const colWidth = (width - gap) / 2;
-    const maxImageHeight = 240;
+    const gap = 16;
+    const colWidth = (width - gap * 2) / 3;
+    const maxImageHeight = 200;
     const startY = doc.y;
     const columns: [string, PdfImage | null, number][] = [
       ['Aadhaar Card (Front)', images.aadhaarFront, x],
       ['Aadhaar Card (Back)', images.aadhaarBack, x + colWidth + gap],
+      ['PAN Card', images.panCard, x + (colWidth + gap) * 2],
     ];
     // Advance by the tallest actually-rendered image, not the max box, so no
     // dead space is reserved below landscape card photos.
@@ -234,6 +246,52 @@ export function buildFormPdf(
     ['Transaction Reference No.', form.transactionRef],
     ['Date of Payment', form.paymentDate],
   ]);
+
+  // Bank account details + UPI QR, side by side.
+  if (doc.y + 200 > doc.page.height - doc.page.margins.bottom) {
+    doc.addPage();
+  }
+  sectionTitle(doc, 'Bank Account Details');
+  const bankStartY = doc.y;
+  const qrColWidth = 140;
+  const bankColWidth = width - qrColWidth - 20;
+
+  doc.font('Helvetica-Bold').fontSize(10).fillColor('#0f172a');
+  doc.text('PMI Services', x, bankStartY, { width: bankColWidth });
+  doc.moveDown(0.4);
+  doc.font('Helvetica').fontSize(9.5).fillColor('#334155');
+  const bankLines: [string, string][] = [
+    ['Bank Name', PMI_BANK_DETAILS.bankName],
+    ['Account Holder Name', PMI_BANK_DETAILS.accountHolderName],
+    ['Account Number', PMI_BANK_DETAILS.accountNumber],
+    ['IFSC Code', PMI_BANK_DETAILS.ifscCode],
+    ['Branch', PMI_BANK_DETAILS.branch],
+  ];
+  for (const [label, value] of bankLines) {
+    doc.text(`${label}: `, x, doc.y, { continued: true, width: bankColWidth });
+    doc.font('Helvetica-Bold').text(value, { width: bankColWidth });
+    doc.font('Helvetica');
+  }
+  const bankBlockBottom = doc.y;
+
+  const qrX = x + width - qrColWidth;
+  let qrBottom = bankStartY;
+  if (fs.existsSync(UPI_QR_PATH)) {
+    try {
+      const qrBuffer = fs.readFileSync(UPI_QR_PATH);
+      doc.image(qrBuffer, qrX, bankStartY, { fit: [qrColWidth, qrColWidth] });
+      qrBottom = bankStartY + qrColWidth;
+    } catch {
+      // Fall through — still show the UPI ID as text below.
+    }
+  }
+  doc.font('Helvetica-Bold').fontSize(9).fillColor('#0f172a');
+  doc.text(PMI_UPI_ID, qrX, qrBottom + 6, { width: qrColWidth, align: 'center' });
+  doc.font('Helvetica').fontSize(7.5).fillColor('#64748b');
+  doc.text('Scan with any UPI app', qrX, doc.y + 2, { width: qrColWidth, align: 'center' });
+
+  doc.x = x;
+  doc.y = Math.max(bankBlockBottom, doc.y) + 8;
 
   // Customer declaration + signature
   if (doc.y + 240 > doc.page.height - doc.page.margins.bottom) {

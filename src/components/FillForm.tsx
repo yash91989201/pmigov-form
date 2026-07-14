@@ -2,11 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { ImageCropDialog } from './ImageCropDialog';
 import { BrandLogo } from './BrandLogo';
-import { CheckCircle2, ShieldCheck, AlertCircle, Upload, X, RotateCcw } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, AlertCircle, Upload, X, RotateCcw, Landmark, QrCode } from 'lucide-react';
 import { submitForm } from '../api';
 import { errorMessage } from '../errors';
 import { useDraftStore, isDraftDirty } from '../store/draftStore';
 import { validateForm, FIELD_ORDER, COUNTRIES, type FieldErrors } from '../validation';
+import upiQr from '../assets/upi-qr.jpeg';
+
+const PMI_BANK_DETAILS = {
+  bankName: 'AXIS BANK',
+  accountHolderName: 'PMI SERVICES ENTERPRISES',
+  accountNumber: '926020017030914',
+  ifscCode: 'UTIB0001398',
+  branch: 'Tikamgarh',
+};
+
+const PMI_UPI_ID = '7460070899@ptyes';
 
 // Shared input styling; border/ring swaps to red when the field has an error.
 const INPUT_BASE =
@@ -37,8 +48,8 @@ export function FillForm() {
 
   // Draft is persisted to localStorage so a refresh / accidental close doesn't
   // wipe a half-filled form (nothing is stored server-side until submit).
-  const { formData, aadhaarFront, aadhaarBack, setField, setAadhaar, reset } = useDraftStore();
-  const [cropTarget, setCropTarget] = useState<{ src: string; side: 'front' | 'back' } | null>(null);
+  const { formData, aadhaarFront, aadhaarBack, panCard, setField, setAadhaar, setPanCard, reset } = useDraftStore();
+  const [cropTarget, setCropTarget] = useState<{ src: string; side: 'front' | 'back' | 'pan' } | null>(null);
   // Whether a saved draft was restored on this load (computed once, before edits).
   const [draftRestored, setDraftRestored] = useState(() => isDraftDirty(useDraftStore.getState()));
 
@@ -60,7 +71,7 @@ export function FillForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back' | 'pan') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -84,8 +95,13 @@ export function FillForm() {
 
   const handleCropConfirm = (dataUrl: string) => {
     if (!cropTarget) return;
-    setAadhaar(cropTarget.side, dataUrl);
-    clearFieldError(cropTarget.side === 'front' ? 'aadhaarFront' : 'aadhaarBack');
+    if (cropTarget.side === 'pan') {
+      setPanCard(dataUrl);
+      clearFieldError('panCard');
+    } else {
+      setAadhaar(cropTarget.side, dataUrl);
+      clearFieldError(cropTarget.side === 'front' ? 'aadhaarFront' : 'aadhaarBack');
+    }
     setCropTarget(null);
     setError(null);
   };
@@ -107,7 +123,7 @@ export function FillForm() {
   // Validates a single field on blur so mistakes surface before submit.
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const name = e.target.name;
-    const all = validateForm({ ...formData }, aadhaarFront, aadhaarBack);
+    const all = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard);
     setFieldErrors((prev) => {
       const next = { ...prev };
       if (all[name]) next[name] = all[name];
@@ -153,7 +169,7 @@ export function FillForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const errors = validateForm({ ...formData }, aadhaarFront, aadhaarBack);
+    const errors = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setError('Please correct the highlighted fields before submitting.');
@@ -184,7 +200,8 @@ export function FillForm() {
         mobileNumber: `${countryCode} ${mobileNumber}`.trim(),
         signature: signatureUrl!,
         aadhaarFront: aadhaarFront!,
-        aadhaarBack: aadhaarBack!
+        aadhaarBack: aadhaarBack!,
+        panCard: panCard!,
       });
 
       setSubmittedData(result);
@@ -232,7 +249,11 @@ export function FillForm() {
       {cropTarget && (
         <ImageCropDialog
           src={cropTarget.src}
-          title={`Crop Aadhaar Card (${cropTarget.side === 'front' ? 'Front' : 'Back'})`}
+          title={
+            cropTarget.side === 'pan'
+              ? 'Crop PAN Card'
+              : `Crop Aadhaar Card (${cropTarget.side === 'front' ? 'Front' : 'Back'})`
+          }
           onCancel={() => setCropTarget(null)}
           onConfirm={handleCropConfirm}
         />
@@ -415,7 +436,7 @@ export function FillForm() {
 
           {/* Identity Documents section */}
           <section>
-            <SectionHeader numeral="II" title="Identity Documents" note="Upload clear images of both sides of your Aadhaar card" />
+            <SectionHeader numeral="II" title="Identity Documents" note="Upload clear images of both sides of your Aadhaar card, and your PAN card" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -468,6 +489,32 @@ export function FillForm() {
                   </label>
                 )}
                 {renderError('aadhaarBack')}
+              </div>
+
+              <div>
+                <label className={LABEL}>PAN Card *</label>
+                {panCard ? (
+                  <div className="relative rounded-md overflow-hidden border border-rule">
+                    <img src={panCard} alt="PAN Card" className="w-full max-h-72 object-contain bg-slate-50" />
+                    <button
+                      type="button"
+                      onClick={() => setPanCard(null)}
+                      className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer transition-colors ${fieldErrors.panCard ? 'border-red-400 bg-red-50 hover:bg-red-100' : 'border-slate-300 bg-slate-50 hover:border-seal hover:bg-seal-tint/50'}`}>
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-7 h-7 text-ink/40 mb-2" />
+                      <p className="text-sm text-ink-soft font-medium">Click to upload PAN card</p>
+                      <p className="text-xs text-slate-400 mt-0.5">JPG or PNG</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/png,image/jpeg" onChange={(e) => handleImageUpload(e, 'pan')} />
+                  </label>
+                )}
+                {renderError('panCard')}
               </div>
             </div>
           </section>
@@ -522,10 +569,11 @@ export function FillForm() {
                   onBlur={handleBlur}
                   className={fieldClass('modeOfPayment', 'bg-white')}
                 >
-                  <option value="Cash">Cash</option>
                   <option value="UPI">UPI</option>
                   <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Credit Card">Credit Card</option>
+                  <option value="Debit Card">Debit Card</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Other">Other</option>
                 </select>
                 {renderError('modeOfPayment')}
               </div>
@@ -561,9 +609,55 @@ export function FillForm() {
             </div>
           </section>
 
+          {/* Bank Account Details section — informational, not user-editable */}
+          <section>
+            <SectionHeader numeral="IV" title="Bank Account Details" note="Remit payment to the account below, or scan the UPI QR code" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="rounded-md border border-rule bg-ink/[0.02] p-5 sm:p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Landmark className="w-4 h-4 text-seal" />
+                  <h4 className="font-display text-base font-semibold text-ink">PMI Services — Bank Details</h4>
+                </div>
+                <dl className="space-y-3 text-sm">
+                  <div>
+                    <dt className={LABEL}>Bank Name</dt>
+                    <dd className="text-ink font-medium">{PMI_BANK_DETAILS.bankName}</dd>
+                  </div>
+                  <div>
+                    <dt className={LABEL}>Account Holder Name</dt>
+                    <dd className="text-ink font-medium">{PMI_BANK_DETAILS.accountHolderName}</dd>
+                  </div>
+                  <div>
+                    <dt className={LABEL}>Account Number</dt>
+                    <dd className="text-ink font-mono font-semibold">{PMI_BANK_DETAILS.accountNumber}</dd>
+                  </div>
+                  <div>
+                    <dt className={LABEL}>IFSC Code</dt>
+                    <dd className="text-ink font-mono font-semibold">{PMI_BANK_DETAILS.ifscCode}</dd>
+                  </div>
+                  <div>
+                    <dt className={LABEL}>Branch</dt>
+                    <dd className="text-ink font-medium">{PMI_BANK_DETAILS.branch}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-md border border-rule bg-ink/[0.02] p-5 sm:p-6 flex flex-col items-center text-center">
+                <div className="flex items-center gap-2 mb-4 self-start">
+                  <QrCode className="w-4 h-4 text-seal" />
+                  <h4 className="font-display text-base font-semibold text-ink">Scan to Pay via UPI</h4>
+                </div>
+                <img src={upiQr} alt="PMI Services UPI QR code" className="w-48 h-48 object-contain rounded-md border border-rule bg-white" />
+                <p className="mt-3 text-sm text-ink font-mono font-semibold">{PMI_UPI_ID}</p>
+                <p className="text-xs text-ink-soft mt-1">Scan with any UPI app</p>
+              </div>
+            </div>
+          </section>
+
           {/* Consent Declaration text box */}
           <section>
-            <SectionHeader numeral="IV" title="Consent Declaration" note="Read in full to enable the agreement below" />
+            <SectionHeader numeral="V" title="Consent Declaration" note="Read in full to enable the agreement below" />
 
             <div
               ref={consentBoxRef}
@@ -617,7 +711,7 @@ export function FillForm() {
 
           {/* Signature and Place */}
           <section>
-            <SectionHeader numeral="V" title="Execution" note="Executed by the customer at the place stated below" />
+            <SectionHeader numeral="VI" title="Execution" note="Executed by the customer at the place stated below" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
               <div>
