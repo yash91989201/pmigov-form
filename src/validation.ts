@@ -111,8 +111,15 @@ export function validateForm(
   if (isBlank(data.emailId)) e.emailId = 'Email ID is required.';
   else if (!EMAIL_RE.test(data.emailId.trim())) e.emailId = 'Enter a valid email address.';
 
-  if (isBlank(data.serviceDescription)) e.serviceDescription = 'Select a certification.';
-  else if (!CERT_SET.has(data.serviceDescription.trim())) e.serviceDescription = 'Select a certification from the list.';
+  // serviceDescription may hold multiple certs joined by "; "
+  {
+    const parts = String(data.serviceDescription ?? '')
+      .split('; ')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parts.length === 0) e.serviceDescription = 'Select at least one certification.';
+    else if (parts.some((p) => !CERT_SET.has(p))) e.serviceDescription = 'Select certifications from the list.';
+  }
 
   if (isBlank(data.amountPayable)) e.amountPayable = 'Amount payable is required.';
   else {

@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { Check, ChevronDown, Search, X } from 'lucide-react';
 import { CERTIFICATIONS } from '../certifications';
+
+// ponytail: join multi picks as "; " so API/PDF/DB stay string-shaped
+export function parseCertifications(value: string): string[] {
+  if (!value.trim()) return [];
+  return value.split('; ').map((s) => s.trim()).filter(Boolean);
+}
 
 type Props = {
   name: string;
@@ -17,8 +23,8 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
 
-  // Show full selected label when closed; filter text only while open.
-  const display = open ? query : value;
+  const selected = useMemo(() => parseCertifications(value), [value]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -43,16 +49,22 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
     setHighlight(0);
   }, [query, open]);
 
-  const pick = (cert: string) => {
-    onChange(cert);
-    setOpen(false);
+  const toggle = (cert: string) => {
+    const next = selectedSet.has(cert)
+      ? selected.filter((c) => c !== cert)
+      : [...selected, cert];
+    onChange(next.join('; '));
     setQuery('');
-    onBlur();
+    inputRef.current?.focus();
+  };
+
+  const remove = (cert: string) => {
+    onChange(selected.filter((c) => c !== cert).join('; '));
   };
 
   const openList = () => {
     setOpen(true);
-    setQuery(value);
+    setQuery('');
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -71,7 +83,9 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filtered[highlight]) pick(filtered[highlight]);
+      if (filtered[highlight]) toggle(filtered[highlight]);
+    } else if (e.key === 'Backspace' && !query && selected.length > 0) {
+      remove(selected[selected.length - 1]);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setOpen(false);
@@ -82,8 +96,30 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
 
   return (
     <div ref={rootRef} className="relative">
-      {/* Hidden input so form name/value still participates in native focus order if needed */}
       <input type="hidden" name={name} value={value} readOnly />
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map((cert) => (
+            <span
+              key={cert}
+              className="inline-flex items-center gap-1 max-w-full rounded-md border border-seal/30 bg-seal-tint px-2 py-1 text-xs text-ink"
+            >
+              <span className="truncate">{cert}</span>
+              <button
+                type="button"
+                aria-label={`Remove ${cert}`}
+                className="shrink-0 p-0.5 rounded text-ink/40 hover:text-ink"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => remove(cert)}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink/40 pointer-events-none" />
         <input
@@ -94,19 +130,16 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
           aria-controls={`${name}-listbox`}
           aria-autocomplete="list"
           autoComplete="off"
-          value={display}
-          placeholder="Search certification…"
+          value={query}
+          placeholder={selected.length ? 'Add another certification…' : 'Search certification…'}
           className={`${className} pl-9 pr-16`}
           onFocus={openList}
           onChange={(e) => {
             setOpen(true);
             setQuery(e.target.value);
-            // Clear selection while typing a new search.
-            if (value) onChange('');
           }}
           onKeyDown={onKeyDown}
           onBlur={() => {
-            // Defer so option mousedown can fire first.
             window.setTimeout(() => {
               if (!rootRef.current?.contains(document.activeElement)) {
                 setOpen(false);
@@ -117,10 +150,10 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
           }}
         />
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-          {value && (
+          {selected.length > 0 && (
             <button
               type="button"
-              aria-label="Clear certification"
+              aria-label="Clear certifications"
               className="p-1 rounded text-ink/40 hover:text-ink"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
@@ -158,28 +191,39 @@ export function CertificationSelect({ name, value, className, onChange, onBlur }
         <ul
           id={`${name}-listbox`}
           role="listbox"
+          aria-multiselectable="true"
           className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-slate-300 bg-white shadow-lg py-1"
         >
           {filtered.length === 0 ? (
             <li className="px-3.5 py-2.5 text-sm text-ink-soft">No matching certification</li>
           ) : (
-            filtered.map((cert, i) => (
-              <li
-                key={`${cert}-${i}`}
-                role="option"
-                aria-selected={cert === value}
-                className={`px-3.5 py-2 text-sm cursor-pointer ${
-                  i === highlight ? 'bg-seal-tint text-ink' : 'text-ink hover:bg-slate-50'
-                } ${cert === value ? 'font-semibold' : ''}`}
-                onMouseEnter={() => setHighlight(i)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  pick(cert);
-                }}
-              >
-                {cert}
-              </li>
-            ))
+            filtered.map((cert, i) => {
+              const isSelected = selectedSet.has(cert);
+              return (
+                <li
+                  key={`${cert}-${i}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`px-3.5 py-2 text-sm cursor-pointer flex items-center gap-2 ${
+                    i === highlight ? 'bg-seal-tint text-ink' : 'text-ink hover:bg-slate-50'
+                  } ${isSelected ? 'font-semibold' : ''}`}
+                  onMouseEnter={() => setHighlight(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    toggle(cert);
+                  }}
+                >
+                  <span
+                    className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                      isSelected ? 'bg-seal border-seal text-white' : 'border-slate-300'
+                    }`}
+                  >
+                    {isSelected && <Check className="w-3 h-3" />}
+                  </span>
+                  <span className="min-w-0">{cert}</span>
+                </li>
+              );
+            })
           )}
         </ul>
       )}
