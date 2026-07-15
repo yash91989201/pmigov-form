@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { ImageCropDialog } from './ImageCropDialog';
 import { BrandLogo } from './BrandLogo';
+import { CertificationSelect } from './CertificationSelect';
 import { CheckCircle2, ShieldCheck, AlertCircle, Upload, X, RotateCcw, Landmark, QrCode } from 'lucide-react';
 import { submitForm } from '../api';
 import { errorMessage } from '../errors';
@@ -14,7 +15,6 @@ const PMI_BANK_DETAILS = {
   accountHolderName: 'PMI SERVICES ENTERPRISES',
   accountNumber: '926020017030914',
   ifscCode: 'UTIB0001398',
-  branch: 'Tikamgarh',
 };
 
 const PMI_UPI_ID = '7460070899@ptyes';
@@ -525,16 +525,27 @@ export function FillForm() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <div className="md:col-span-2">
-                <label className={LABEL}>Service Description *</label>
-                <input
-                  type="text"
+                <label className={LABEL}>Select Certification *</label>
+                <CertificationSelect
                   name="serviceDescription"
                   value={formData.serviceDescription}
-                  onChange={handleInputChange}
-                  onBlur={handleBlur}
                   className={fieldClass('serviceDescription')}
-                  placeholder="Describe the services availed"
-                  required
+                  onChange={(v) => {
+                    setField({ serviceDescription: v });
+                    clearFieldError('serviceDescription');
+                    setError(null);
+                  }}
+                  onBlur={() => {
+                    // Read store — onChange may not have flushed into this render yet.
+                    const latest = useDraftStore.getState();
+                    const all = validateForm(latest.formData, latest.aadhaarFront, latest.aadhaarBack, latest.panCard);
+                    setFieldErrors((prev) => {
+                      const next = { ...prev };
+                      if (all.serviceDescription) next.serviceDescription = all.serviceDescription;
+                      else delete next.serviceDescription;
+                      return next;
+                    });
+                  }}
                 />
                 {renderError('serviceDescription')}
               </div>
@@ -571,9 +582,6 @@ export function FillForm() {
                 >
                   <option value="UPI">UPI</option>
                   <option value="Bank Transfer">Bank Transfer</option>
-                  <option value="Debit Card">Debit Card</option>
-                  <option value="Cheque">Cheque</option>
-                  <option value="Other">Other</option>
                 </select>
                 {renderError('modeOfPayment')}
               </div>
@@ -587,7 +595,7 @@ export function FillForm() {
                   onChange={handleInputChange}
                   onBlur={handleBlur}
                   className={fieldClass('transactionRef', 'font-mono')}
-                  placeholder="UPI Ref / Cheque No."
+                  placeholder="UPI Ref / Transfer Ref"
                   required
                 />
                 {renderError('transactionRef')}
@@ -635,10 +643,6 @@ export function FillForm() {
                   <div>
                     <dt className={LABEL}>IFSC Code</dt>
                     <dd className="text-ink font-mono font-semibold">{PMI_BANK_DETAILS.ifscCode}</dd>
-                  </div>
-                  <div>
-                    <dt className={LABEL}>Branch</dt>
-                    <dd className="text-ink font-medium">{PMI_BANK_DETAILS.branch}</dd>
                   </div>
                 </dl>
               </div>

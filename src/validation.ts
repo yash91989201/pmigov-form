@@ -1,4 +1,7 @@
 import type { DraftFormData } from './store/draftStore';
+import { CERTIFICATIONS } from './certifications';
+
+const CERT_SET = new Set<string>(CERTIFICATIONS);
 
 export type FieldErrors = Partial<Record<string, string>>;
 
@@ -108,8 +111,8 @@ export function validateForm(
   if (isBlank(data.emailId)) e.emailId = 'Email ID is required.';
   else if (!EMAIL_RE.test(data.emailId.trim())) e.emailId = 'Enter a valid email address.';
 
-  if (isBlank(data.serviceDescription)) e.serviceDescription = 'Service description is required.';
-  else if (data.serviceDescription.trim().length < 3) e.serviceDescription = 'Please describe the service availed.';
+  if (isBlank(data.serviceDescription)) e.serviceDescription = 'Select a certification.';
+  else if (!CERT_SET.has(data.serviceDescription.trim())) e.serviceDescription = 'Select a certification from the list.';
 
   if (isBlank(data.amountPayable)) e.amountPayable = 'Amount payable is required.';
   else {

@@ -240,7 +240,7 @@ export function buildFormPdf(
   // Payment details
   sectionTitle(doc, 'Payment Details');
   fieldTable(doc, [
-    ['Service Description', form.serviceDescription],
+    ['Select Certification', form.serviceDescription],
     ['Amount Payable', form.amountPayable ? `Rs. ${form.amountPayable}` : null],
     ['Mode of Payment', form.modeOfPayment],
     ['Transaction Reference No.', form.transactionRef],

@@ -119,7 +119,7 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
           
           <div className="border border-gray-400 mt-4 rounded-lg overflow-hidden print-no-border-radius">
             <div className="flex border-b border-gray-400">
-              <div className="w-1/3 bg-gray-100 p-2 text-sm font-semibold text-gray-700 border-r border-gray-400">Service Description</div>
+              <div className="w-1/3 bg-gray-100 p-2 text-sm font-semibold text-gray-700 border-r border-gray-400">Select Certification</div>
               <div className="w-2/3 p-2 text-sm font-bold">{formData.serviceDescription}</div>
             </div>
             <div className="flex border-b border-gray-400">

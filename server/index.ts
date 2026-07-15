@@ -102,7 +102,7 @@ const REQUIRED_FIELDS: [keyof SubmitBody, string][] = [
   ['address', 'Address'],
   ['mobileNumber', 'Mobile number'],
   ['emailId', 'Email ID'],
-  ['serviceDescription', 'Service description'],
+  ['serviceDescription', 'Select Certification'],
   ['amountPayable', 'Amount payable'],
   ['modeOfPayment', 'Mode of payment'],
   ['transactionRef', 'Transaction reference no.'],
