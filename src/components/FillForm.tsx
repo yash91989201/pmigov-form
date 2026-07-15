@@ -17,7 +17,7 @@ const PMI_BANK_DETAILS = {
   ifscCode: 'UTIB0001398',
 };
 
-const PMI_UPI_ID = '7460070899@ptyes';
+const PMI_UPI_ID = '7460070899@ptaxis';
 
 // Shared input styling; border/ring swaps to red when the field has an error.
 const INPUT_BASE =

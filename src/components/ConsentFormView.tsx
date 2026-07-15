@@ -12,7 +12,7 @@ const PMI_BANK_DETAILS = {
   branch: 'Tikamgarh',
 };
 
-const PMI_UPI_ID = '7460070899@ptyes';
+const PMI_UPI_ID = '7460070899@ptaxis';
 
 export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
   return (

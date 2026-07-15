@@ -36,7 +36,7 @@ const PMI_BANK_DETAILS = {
   branch: 'Tikamgarh',
 };
 
-const PMI_UPI_ID = '7460070899@ptyes';
+const PMI_UPI_ID = '7460070899@ptaxis';
 
 const CONSENT_ITEMS = [
   'I have been informed about the nature, scope, and charges of the services provided by PMI Services and have no objection to making payment for the same.',
