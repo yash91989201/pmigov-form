@@ -1,7 +1,4 @@
 import type { DraftFormData } from './store/draftStore';
-import { CERTIFICATIONS } from './certifications';
-
-const CERT_SET = new Set<string>(CERTIFICATIONS);
 
 export type FieldErrors = Partial<Record<string, string>>;
 
@@ -112,15 +109,7 @@ export function validateForm(
   if (isBlank(data.emailId)) e.emailId = 'Email ID is required.';
   else if (!EMAIL_RE.test(data.emailId.trim())) e.emailId = 'Enter a valid email address.';
 
-  // serviceDescription may hold multiple certs joined by "; "
-  {
-    const parts = String(data.serviceDescription ?? '')
-      .split('; ')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (parts.length === 0) e.serviceDescription = 'Select at least one certification.';
-    else if (parts.some((p) => !CERT_SET.has(p))) e.serviceDescription = 'Select certifications from the list.';
-  }
+  if (isBlank(data.serviceDescription)) e.serviceDescription = 'Certification is required.';
 
   if (isBlank(data.amountPayable)) e.amountPayable = 'Amount payable is required.';
   else {

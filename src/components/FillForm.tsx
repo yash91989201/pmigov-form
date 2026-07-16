@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SignaturePad } from './SignaturePad';
 import { ImageCropDialog } from './ImageCropDialog';
 import { BrandLogo } from './BrandLogo';
-import { CertificationSelect } from './CertificationSelect';
 import { CheckCircle2, ShieldCheck, AlertCircle, Upload, X, RotateCcw, Landmark, QrCode } from 'lucide-react';
 import { submitForm } from '../api';
 import { errorMessage } from '../errors';
@@ -532,26 +531,15 @@ export function FillForm() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
               <div className="md:col-span-2">
                 <label className={LABEL}>Select Certification(s) *</label>
-                <CertificationSelect
+                <input
+                  type="text"
                   name="serviceDescription"
                   value={formData.serviceDescription}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
                   className={fieldClass('serviceDescription')}
-                  onChange={(v) => {
-                    setField({ serviceDescription: v });
-                    clearFieldError('serviceDescription');
-                    setError(null);
-                  }}
-                  onBlur={() => {
-                    // Read store — onChange may not have flushed into this render yet.
-                    const latest = useDraftStore.getState();
-                    const all = validateForm(latest.formData, latest.aadhaarFront, latest.aadhaarBack, latest.panCard, latest.paymentProof);
-                    setFieldErrors((prev) => {
-                      const next = { ...prev };
-                      if (all.serviceDescription) next.serviceDescription = all.serviceDescription;
-                      else delete next.serviceDescription;
-                      return next;
-                    });
-                  }}
+                  placeholder="e.g. CAMS, PMP"
+                  required
                 />
                 {renderError('serviceDescription')}
               </div>
