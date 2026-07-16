@@ -41,6 +41,7 @@ const SCHEMA = `
     aadhaar_front_key TEXT,
     aadhaar_back_key TEXT,
     pan_card_key TEXT,
+    payment_proof_key TEXT,
     content_hash TEXT,
     submitter_ip TEXT,
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -50,6 +51,7 @@ const SCHEMA = `
   ALTER TABLE consent_forms ADD COLUMN IF NOT EXISTS content_hash TEXT;
   ALTER TABLE consent_forms ADD COLUMN IF NOT EXISTS submitter_ip TEXT;
   ALTER TABLE consent_forms ADD COLUMN IF NOT EXISTS pan_card_key TEXT;
+  ALTER TABLE consent_forms ADD COLUMN IF NOT EXISTS payment_proof_key TEXT;
 
   -- Append-only change log: records every UPDATE/DELETE on consent_forms with
   -- the old/new row, the DB role that did it, and when.

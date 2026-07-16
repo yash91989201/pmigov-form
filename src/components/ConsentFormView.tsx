@@ -139,6 +139,13 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
               <div className="w-2/3 p-2 text-sm font-bold">{formData.paymentDate}</div>
             </div>
           </div>
+
+          {formData.paymentProof && (
+            <div className="mt-4 max-w-sm">
+              <p className="text-xs font-semibold text-gray-600 mb-2">Payment Proof</p>
+              <img src={formData.paymentProof} alt="Payment Proof" className="w-full h-auto border border-gray-300 rounded-lg shadow-sm" />
+            </div>
+          )}
         </section>
 
         {/* Bank Account Details */}

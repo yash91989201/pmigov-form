@@ -154,6 +154,7 @@ export function buildFormPdf(
     aadhaarFront: PdfImage | null;
     aadhaarBack: PdfImage | null;
     panCard: PdfImage | null;
+    paymentProof: PdfImage | null;
   },
   verification?: VerificationMeta,
 ): PDFKit.PDFDocument {
@@ -246,6 +247,33 @@ export function buildFormPdf(
     ['Transaction Reference No.', form.transactionRef],
     ['Date of Payment', form.paymentDate],
   ]);
+
+  // Payment proof image (when provided), full content width below the table.
+  if (embeddable(images.paymentProof)) {
+    if (doc.y + 260 > doc.page.height - doc.page.margins.bottom) {
+      doc.addPage();
+    }
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569');
+    doc.text('Payment Proof', x, doc.y, { width });
+    doc.moveDown(0.3);
+    const proofY = doc.y;
+    doc.image(images.paymentProof.buffer, x, proofY, {
+      fit: [width, 220],
+      align: 'center',
+    });
+    let rendered = 220;
+    try {
+      const dims = imageSize(images.paymentProof.buffer);
+      if (dims.width && dims.height) {
+        const scale = Math.min(width / dims.width, 220 / dims.height, 1);
+        rendered = dims.height * scale;
+      }
+    } catch {
+      // Unknown dimensions — keep the conservative full box height.
+    }
+    doc.x = x;
+    doc.y = proofY + rendered;
+  }
 
   // Bank account details + UPI QR, side by side.
   if (doc.y + 200 > doc.page.height - doc.page.margins.bottom) {

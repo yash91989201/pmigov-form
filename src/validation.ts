@@ -82,13 +82,14 @@ function isFutureDate(value: string): boolean {
 /**
  * Validates the whole form and returns a map of field name -> error message.
  * An empty object means the form is valid. Field names match the input `name`
- * attributes (plus `aadhaarFront`, `aadhaarBack`, `signature`, `agreed`).
+ * attributes (plus `aadhaarFront`, `aadhaarBack`, `paymentProof`, `signature`, `agreed`).
  */
 export function validateForm(
   data: DraftFormData,
   aadhaarFront: string | null,
   aadhaarBack: string | null,
   panCard: string | null,
+  paymentProof: string | null,
 ): FieldErrors {
   const e: FieldErrors = {};
 
@@ -141,6 +142,7 @@ export function validateForm(
   if (!aadhaarFront) e.aadhaarFront = 'Upload the front of the Aadhaar card.';
   if (!aadhaarBack) e.aadhaarBack = 'Upload the back of the Aadhaar card.';
   if (!panCard) e.panCard = 'Upload the PAN card.';
+  if (!paymentProof) e.paymentProof = 'Upload payment proof.';
   if (!data.signatureUrl) e.signature = 'Your signature is required.';
   if (!data.agreed) e.agreed = 'You must agree to the declaration to proceed.';
 
@@ -163,6 +165,7 @@ export const FIELD_ORDER = [
   'modeOfPayment',
   'transactionRef',
   'paymentDate',
+  'paymentProof',
   'place',
   'signature',
   'agreed',

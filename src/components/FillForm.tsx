@@ -48,8 +48,8 @@ export function FillForm() {
 
   // Draft is persisted to localStorage so a refresh / accidental close doesn't
   // wipe a half-filled form (nothing is stored server-side until submit).
-  const { formData, aadhaarFront, aadhaarBack, panCard, setField, setAadhaar, setPanCard, reset } = useDraftStore();
-  const [cropTarget, setCropTarget] = useState<{ src: string; side: 'front' | 'back' | 'pan' } | null>(null);
+  const { formData, aadhaarFront, aadhaarBack, panCard, paymentProof, setField, setAadhaar, setPanCard, setPaymentProof, reset } = useDraftStore();
+  const [cropTarget, setCropTarget] = useState<{ src: string; side: 'front' | 'back' | 'pan' | 'proof' } | null>(null);
   // Whether a saved draft was restored on this load (computed once, before edits).
   const [draftRestored, setDraftRestored] = useState(() => isDraftDirty(useDraftStore.getState()));
 
@@ -71,7 +71,7 @@ export function FillForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back' | 'pan') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back' | 'pan' | 'proof') => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -98,6 +98,9 @@ export function FillForm() {
     if (cropTarget.side === 'pan') {
       setPanCard(dataUrl);
       clearFieldError('panCard');
+    } else if (cropTarget.side === 'proof') {
+      setPaymentProof(dataUrl);
+      clearFieldError('paymentProof');
     } else {
       setAadhaar(cropTarget.side, dataUrl);
       clearFieldError(cropTarget.side === 'front' ? 'aadhaarFront' : 'aadhaarBack');
@@ -123,7 +126,7 @@ export function FillForm() {
   // Validates a single field on blur so mistakes surface before submit.
   const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const name = e.target.name;
-    const all = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard);
+    const all = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard, paymentProof);
     setFieldErrors((prev) => {
       const next = { ...prev };
       if (all[name]) next[name] = all[name];
@@ -169,7 +172,7 @@ export function FillForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const errors = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard);
+    const errors = validateForm({ ...formData }, aadhaarFront, aadhaarBack, panCard, paymentProof);
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       setError('Please correct the highlighted fields before submitting.');
@@ -202,6 +205,7 @@ export function FillForm() {
         aadhaarFront: aadhaarFront!,
         aadhaarBack: aadhaarBack!,
         panCard: panCard!,
+        paymentProof: paymentProof!,
       });
 
       setSubmittedData(result);
@@ -250,7 +254,9 @@ export function FillForm() {
         <ImageCropDialog
           src={cropTarget.src}
           title={
-            cropTarget.side === 'pan'
+            cropTarget.side === 'proof'
+              ? 'Crop Payment Proof'
+              : cropTarget.side === 'pan'
               ? 'Crop PAN Card'
               : `Crop Aadhaar Card (${cropTarget.side === 'front' ? 'Front' : 'Back'})`
           }
@@ -538,7 +544,7 @@ export function FillForm() {
                   onBlur={() => {
                     // Read store — onChange may not have flushed into this render yet.
                     const latest = useDraftStore.getState();
-                    const all = validateForm(latest.formData, latest.aadhaarFront, latest.aadhaarBack, latest.panCard);
+                    const all = validateForm(latest.formData, latest.aadhaarFront, latest.aadhaarBack, latest.panCard, latest.paymentProof);
                     setFieldErrors((prev) => {
                       const next = { ...prev };
                       if (all.serviceDescription) next.serviceDescription = all.serviceDescription;
@@ -613,6 +619,31 @@ export function FillForm() {
                   required
                 />
                 {renderError('paymentDate')}
+              </div>
+              <div className="md:col-span-2">
+                <label className={LABEL}>Payment Proof *</label>
+                {paymentProof ? (
+                  <div className="relative rounded-md overflow-hidden border border-rule">
+                    <img src={paymentProof} alt="Payment Proof" className="w-full max-h-72 object-contain bg-slate-50" />
+                    <button
+                      type="button"
+                      onClick={() => setPaymentProof(null)}
+                      className="absolute top-2 right-2 bg-white/90 p-1.5 rounded-full shadow hover:bg-red-50 hover:text-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className={`flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-md cursor-pointer transition-colors ${fieldErrors.paymentProof ? 'border-red-400 bg-red-50 hover:bg-red-100' : 'border-slate-300 bg-slate-50 hover:border-seal hover:bg-seal-tint/50'}`}>
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <Upload className="w-7 h-7 text-ink/40 mb-2" />
+                      <p className="text-sm text-ink-soft font-medium">Click to upload payment proof</p>
+                      <p className="text-xs text-slate-400 mt-0.5">JPG or PNG</p>
+                    </div>
+                    <input type="file" className="hidden" accept="image/png,image/jpeg" onChange={(e) => handleImageUpload(e, 'proof')} />
+                  </label>
+                )}
+                {renderError('paymentProof')}
               </div>
             </div>
           </section>

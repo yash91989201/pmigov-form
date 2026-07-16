@@ -42,9 +42,11 @@ interface DraftState {
   aadhaarFront: string | null;
   aadhaarBack: string | null;
   panCard: string | null;
+  paymentProof: string | null;
   setField: (patch: Partial<DraftFormData>) => void;
   setAadhaar: (side: 'front' | 'back', value: string | null) => void;
   setPanCard: (value: string | null) => void;
+  setPaymentProof: (value: string | null) => void;
   reset: () => void;
 }
 
@@ -55,11 +57,13 @@ export const useDraftStore = create<DraftState>()(
       aadhaarFront: null,
       aadhaarBack: null,
       panCard: null,
+      paymentProof: null,
       setField: (patch) => set((s) => ({ formData: { ...s.formData, ...patch } })),
       setAadhaar: (side, value) =>
         set(side === 'front' ? { aadhaarFront: value } : { aadhaarBack: value }),
       setPanCard: (value) => set({ panCard: value }),
-      reset: () => set({ formData: EMPTY_FORM, aadhaarFront: null, aadhaarBack: null, panCard: null }),
+      setPaymentProof: (value) => set({ paymentProof: value }),
+      reset: () => set({ formData: EMPTY_FORM, aadhaarFront: null, aadhaarBack: null, panCard: null, paymentProof: null }),
     }),
     {
       name: 'pmigov-consent-draft',
@@ -70,6 +74,7 @@ export const useDraftStore = create<DraftState>()(
         aadhaarFront: s.aadhaarFront,
         aadhaarBack: s.aadhaarBack,
         panCard: s.panCard,
+        paymentProof: s.paymentProof,
       }),
     },
   ),
@@ -77,9 +82,9 @@ export const useDraftStore = create<DraftState>()(
 
 /** True when the current draft has any user-entered content worth restoring. */
 export function isDraftDirty(
-  state: Pick<DraftState, 'formData' | 'aadhaarFront' | 'aadhaarBack' | 'panCard'>,
+  state: Pick<DraftState, 'formData' | 'aadhaarFront' | 'aadhaarBack' | 'panCard' | 'paymentProof'>,
 ): boolean {
-  if (state.aadhaarFront || state.aadhaarBack || state.panCard) return true;
+  if (state.aadhaarFront || state.aadhaarBack || state.panCard || state.paymentProof) return true;
   return (Object.keys(state.formData) as (keyof DraftFormData)[]).some((key) => {
     const value = state.formData[key];
     if (key === 'modeOfPayment') return value !== 'UPI';

@@ -42,10 +42,10 @@ const FIELD_ORDER: (keyof HashableFields)[] = [
  */
 export function hashSubmission(
   fields: HashableFields,
-  images: { signature: Buffer; aadhaarFront: Buffer; aadhaarBack: Buffer; panCard: Buffer },
+  images: { signature: Buffer; aadhaarFront: Buffer; aadhaarBack: Buffer; panCard: Buffer; paymentProof: Buffer },
 ): string {
   const h = createHash('sha256');
-  h.update('pmigov-consent-v2\n');
+  h.update('pmigov-consent-v3\n');
   for (const key of FIELD_ORDER) {
     const value = fields[key] ?? '';
     h.update(`${key}:${Buffer.byteLength(value)}:`);
@@ -57,6 +57,7 @@ export function hashSubmission(
     ['aadhaarFront', images.aadhaarFront],
     ['aadhaarBack', images.aadhaarBack],
     ['panCard', images.panCard],
+    ['paymentProof', images.paymentProof],
   ] as const) {
     h.update(`${name}:${buf.length}:`);
     h.update(buf);
