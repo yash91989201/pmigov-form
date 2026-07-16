@@ -9,7 +9,6 @@ const PMI_BANK_DETAILS = {
   accountHolderName: 'PMI SERVICES ENTERPRISES',
   accountNumber: '926020017030914',
   ifscCode: 'UTIB0001398',
-  branch: 'Tikamgarh',
 };
 
 const PMI_UPI_ID = '7460070899@ptaxis';
@@ -170,13 +169,9 @@ export function ConsentFormView({ formData }: { formData: ConsentFormDetail }) {
                 <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Account Number</div>
                 <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.accountNumber}</div>
               </div>
-              <div className="flex border-b border-gray-300">
+              <div className="flex border-gray-300">
                 <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">IFSC Code</div>
                 <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.ifscCode}</div>
-              </div>
-              <div className="flex">
-                <div className="w-1/2 bg-gray-50 p-2 text-sm font-semibold text-gray-700 border-r border-gray-300">Branch</div>
-                <div className="w-1/2 p-2 text-sm font-bold">{PMI_BANK_DETAILS.branch}</div>
               </div>
             </div>
 

@@ -33,7 +33,6 @@ const PMI_BANK_DETAILS = {
   accountHolderName: 'PMI SERVICES ENTERPRISES',
   accountNumber: '926020017030914',
   ifscCode: 'UTIB0001398',
-  branch: 'Tikamgarh',
 };
 
 const PMI_UPI_ID = '7460070899@ptaxis';
@@ -248,31 +247,32 @@ export function buildFormPdf(
     ['Date of Payment', form.paymentDate],
   ]);
 
-  // Payment proof image (when provided), full content width below the table.
+  // Payment proof image (when provided), compact and centered below the table.
   if (embeddable(images.paymentProof)) {
-    if (doc.y + 260 > doc.page.height - doc.page.margins.bottom) {
+    if (doc.y + 220 > doc.page.height - doc.page.margins.bottom) {
       doc.addPage();
     }
-    doc.font('Helvetica-Bold').fontSize(10).fillColor('#475569');
-    doc.text('Payment Proof', x, doc.y, { width });
-    doc.moveDown(0.3);
+    sectionTitle(doc, 'Payment Proof');
     const proofY = doc.y;
-    doc.image(images.paymentProof.buffer, x, proofY, {
-      fit: [width, 220],
+    const fitW = width * 0.7;
+    const fitH = 160;
+    const imgX = x + (width - fitW) / 2;
+    doc.image(images.paymentProof.buffer, imgX, proofY, {
+      fit: [fitW, fitH],
       align: 'center',
     });
-    let rendered = 220;
+    let rendered = fitH;
     try {
       const dims = imageSize(images.paymentProof.buffer);
       if (dims.width && dims.height) {
-        const scale = Math.min(width / dims.width, 220 / dims.height, 1);
+        const scale = Math.min(fitW / dims.width, fitH / dims.height, 1);
         rendered = dims.height * scale;
       }
     } catch {
       // Unknown dimensions — keep the conservative full box height.
     }
     doc.x = x;
-    doc.y = proofY + rendered;
+    doc.y = proofY + rendered + 10;
   }
 
   // Bank account details + UPI QR, side by side.
@@ -293,7 +293,6 @@ export function buildFormPdf(
     ['Account Holder Name', PMI_BANK_DETAILS.accountHolderName],
     ['Account Number', PMI_BANK_DETAILS.accountNumber],
     ['IFSC Code', PMI_BANK_DETAILS.ifscCode],
-    ['Branch', PMI_BANK_DETAILS.branch],
   ];
   for (const [label, value] of bankLines) {
     doc.text(`${label}: `, x, doc.y, { continued: true, width: bankColWidth });
