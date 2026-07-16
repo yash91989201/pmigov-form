@@ -142,4 +142,6 @@ export const CERTIFICATIONS = [
   'CDCP® – Certified Digital Construction Professional',
   'CPP® – Certified Procurement Professional',
   'CCE/A® – Certified Cost Estimator/Analyst',
+  'CAMS® – Certified Anti-Money Laundering Specialist',
+  'CTP® – Certified Treasury Professional',
 ] as const;
